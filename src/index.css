@@ -1,0 +1,146 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Bebas Neue", Impact, sans-serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+
+  --color-cirkle-black: #060606;
+  --color-cirkle-card: #161616;
+  --color-cirkle-input: #1A1A1A;
+  --color-cirkle-chip: #2A2A2A;
+  --color-cirkle-border: #2A2A2A;
+  --color-cirkle-border-card: #3A3A3A;
+  --color-cirkle-yellow: #E7EA4A;
+  --color-cirkle-yellow-hover: #D4D740;
+  --color-cirkle-text-white: #FFFFFF;
+  --color-cirkle-text-light: #C0C0C0;
+  --color-cirkle-text-muted: #8A8A8A;
+  --color-cirkle-text-dark: #111111;
+  --color-cirkle-text-placeholder: #7D7D7D;
+  --color-cirkle-nav-bottom: #1A1A1A;
+
+  --color-cirkle-avatar-green: #88D9A1;
+  --color-cirkle-avatar-blue: #A8C5F0;
+  --color-cirkle-avatar-purple: #C9B3F0;
+  --color-cirkle-avatar-coral: #F0A8A8;
+
+  --text-hero-desktop: 96px;
+  --text-hero-desktop--line-height: 0.9;
+  --text-hero-desktop--letter-spacing: -0.01em;
+
+  --text-hero-mobile: 64px;
+  --text-hero-mobile--line-height: 0.9;
+  --text-hero-mobile--letter-spacing: -0.01em;
+
+  --text-hero-sm: 48px;
+  --text-hero-sm--line-height: 0.92;
+  --text-hero-sm--letter-spacing: 0;
+
+  --text-section-lg: 56px;
+  --text-section-lg--line-height: 0.92;
+  --text-section-lg--letter-spacing: -0.01em;
+
+  --text-section-md: 36px;
+  --text-section-md--line-height: 0.95;
+  --text-section-md--letter-spacing: 0;
+
+  --text-section-sm: 28px;
+  --text-section-sm--line-height: 1.0;
+  --text-section-sm--letter-spacing: 0;
+
+  --text-label: 12px;
+  --text-label--line-height: 1.2;
+  --text-label--letter-spacing: 0.15em;
+
+  --radius-card: 12px;
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+  --breakpoint-xs: 480px;
+}
+
+@layer base {
+  body {
+    @apply bg-cirkle-black font-body text-white antialiased;
+  }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+}
+
+@layer components {
+  /* Buttons */
+  .btn-primary {
+    @apply inline-flex items-center justify-center
+           bg-cirkle-yellow text-cirkle-text-dark
+           font-body font-bold text-[15px] rounded-full
+           transition-all duration-200
+           hover:-translate-y-0.5 hover:shadow-lg hover:bg-cirkle-yellow-hover
+           active:translate-y-0;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center
+           bg-transparent text-white
+           font-body font-semibold text-[15px]
+           border-[1.5px] border-white/65 rounded-full
+           transition-all duration-200
+           hover:bg-white/10 hover:border-white/80
+           active:bg-white/5;
+  }
+  .btn-small {
+    @apply inline-flex items-center justify-center
+           bg-cirkle-yellow text-cirkle-text-dark
+           font-body font-bold text-[13px] rounded-full
+           transition-all duration-200
+           hover:-translate-y-0.5 hover:bg-cirkle-yellow-hover;
+  }
+
+  /* Cards */
+  .card-dark {
+    @apply bg-cirkle-card border border-cirkle-border-card rounded-card
+           shadow-card transition-all duration-200
+           hover:-translate-y-1 hover:border-cirkle-text-muted/30;
+  }
+
+  /* Chip / Tag */
+  .chip {
+    @apply inline-flex items-center px-2.5 py-1
+           bg-cirkle-chip text-cirkle-text-light
+           font-body text-[11px] font-semibold rounded-full;
+  }
+
+  /* Carousel row */
+  .snap-carousel {
+    @apply flex overflow-x-auto snap-x snap-mandatory;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .snap-carousel::-webkit-scrollbar { display: none; }
+
+  /* Hover lifts */
+  .hover-lift    { @apply transition-all duration-200 hover:-translate-y-1; }
+  .hover-lift-sm { @apply transition-all duration-200 hover:-translate-y-0.5; }
+
+  /* Input */
+  .input-dark {
+    @apply bg-cirkle-input border border-cirkle-border-card rounded-[10px]
+           px-4 py-3 font-body text-[14px] text-white w-full outline-none
+           transition-all duration-200 placeholder:text-cirkle-text-placeholder
+           focus:border-cirkle-yellow;
+  }
+}
+
+button:focus-visible, a:focus-visible, input:focus-visible {
+  outline: 2px solid #E7EA4A;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
