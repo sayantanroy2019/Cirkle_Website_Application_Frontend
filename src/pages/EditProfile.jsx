@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Plus, X, Lock } from 'lucide-react'
 import { api, ApiError } from '../lib/api.js'
 import { getLifestyleTags } from '../lib/reference.js'
+import { useProfileStore } from '../store/profileStore.js'
 
 const MIN_NAME = 2
 const MIN_PHOTOS = 2
@@ -17,49 +18,51 @@ const MOCK_PHONE = '+91 98765 43210'
 export function EditProfile() {
   const navigate = useNavigate()
 
-  const [isLoading, setIsLoading] = useState(true)
-  const [loadError, setLoadError] = useState('')
+  const profile = useProfileStore((s) => s.profile)
+  const profileError = useProfileStore((s) => s.error)
+  const fetchProfile = useProfileStore((s) => s.fetchProfile)
+  const applyProfileUpdate = useProfileStore((s) => s.applyUpdate)
+
+  const [allTags, setAllTags] = useState([])
+  const [tagsError, setTagsError] = useState('')
+  const [seeded, setSeeded] = useState(false)
 
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [bio, setBio] = useState('')
   // photos: { uid, s3Key|null, url|null } — existing have s3Key, new have a preview url
   const [photos, setPhotos] = useState([])
-  const [allTags, setAllTags] = useState([])
   const [selectedTagIds, setSelectedTagIds] = useState([])
 
   const [isSaving, setIsSaving] = useState(false)
   const [apiError, setApiError] = useState('')
   const fileInputRef = useRef(null)
 
-  // Load current profile + the tag catalogue.
+  // Ensure the shared profile is loaded and fetch the tag catalogue.
   useEffect(() => {
-    let active = true
-    Promise.all([api.get('/profile/me'), getLifestyleTags()])
-      .then(([profileRes, tags]) => {
-        if (!active) return
-        const p = profileRes.profile
-        setFirstName(p.firstName ?? '')
-        setLastName(p.lastName ?? '')
-        setBio(p.bio ?? '')
-        setPhotos(
-          [...p.photos]
-            .sort((a, b) => a.position - b.position)
-            .map((ph) => ({ uid: ph.id, s3Key: ph.s3Key, url: null })),
-        )
-        setSelectedTagIds(p.lifestyleTags.map((t) => t.id))
-        setAllTags(tags)
-      })
-      .catch((err) => {
-        if (active) setLoadError(err instanceof ApiError ? err.message : 'Could not load your profile.')
-      })
-      .finally(() => {
-        if (active) setIsLoading(false)
-      })
-    return () => {
-      active = false
-    }
-  }, [])
+    fetchProfile()
+    getLifestyleTags()
+      .then(setAllTags)
+      .catch(() => setTagsError('Could not load tags.'))
+  }, [fetchProfile])
+
+  // Seed the editable form once from the cached profile (usually already there).
+  useEffect(() => {
+    if (!profile || seeded) return
+    setFirstName(profile.firstName ?? '')
+    setLastName(profile.lastName ?? '')
+    setBio(profile.bio ?? '')
+    setPhotos(
+      [...profile.photos]
+        .sort((a, b) => a.position - b.position)
+        .map((ph) => ({ uid: ph.id, s3Key: ph.s3Key, url: null })),
+    )
+    setSelectedTagIds(profile.lifestyleTags.map((t) => t.id))
+    setSeeded(true)
+  }, [profile, seeded])
+
+  const isLoading = !seeded && !profileError
+  const loadError = profileError || tagsError
 
   // Revoke preview URLs on unmount.
   const photosRef = useRef(photos)
@@ -134,6 +137,17 @@ export function EditProfile() {
         lastName: lastName.trim(),
         bio: bio.trim(),
         lifestyleTagIds: selectedTagIds,
+        photos: payloadPhotos,
+      })
+      // Update the shared profile in place (PATCH returns no body) so Profile
+      // shows the new values instantly without a refetch.
+      applyProfileUpdate({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        bio: bio.trim(),
+        lifestyleTags: selectedTagIds
+          .map((id) => allTags.find((t) => t.id === id))
+          .filter(Boolean),
         photos: payloadPhotos,
       })
       navigate('/profile')

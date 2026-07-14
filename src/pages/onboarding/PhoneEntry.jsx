@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Phone } from 'lucide-react'
-import { api, setToken, ApiError } from '../../lib/api.js'
+import { api, ApiError } from '../../lib/api.js'
+import { useAuthStore } from '../../store/authStore.js'
 import { routeForOnboardingStep } from './onboardingRoutes.js'
 
 const PHONE_REGEX = /^[6-9]\d{9}$/
 
 export function PhoneEntry() {
   const navigate = useNavigate()
+  const setToken = useAuthStore((s) => s.setToken)
   const [phone, setPhone] = useState('')
   const [touched, setTouched] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)

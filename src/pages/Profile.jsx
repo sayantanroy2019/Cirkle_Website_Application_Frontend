@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight, Pencil } from 'lucide-react'
-import { api, ApiError, clearToken } from '../lib/api.js'
+import { useAuthStore } from '../store/authStore.js'
+import { useProfileStore } from '../store/profileStore.js'
 
 const HELP_ROWS = ['Check for updates', 'Contact us', 'Manage account']
 const LEGAL_ROWS = ['Privacy policy', 'Terms of use', 'Safety guidelines']
@@ -35,23 +36,14 @@ function SettingsSection({ title, rows }) {
 
 export function Profile() {
   const navigate = useNavigate()
-  const [profile, setProfile] = useState(null)
-  const [loadError, setLoadError] = useState('')
+  const clearToken = useAuthStore((s) => s.clearToken)
+  const profile = useProfileStore((s) => s.profile)
+  const loadError = useProfileStore((s) => s.error)
+  const fetchProfile = useProfileStore((s) => s.fetchProfile)
 
   useEffect(() => {
-    let active = true
-    api
-      .get('/profile/me')
-      .then((data) => {
-        if (active) setProfile(data.profile)
-      })
-      .catch((err) => {
-        if (active) setLoadError(err instanceof ApiError ? err.message : 'Could not load your profile.')
-      })
-    return () => {
-      active = false
-    }
-  }, [])
+    fetchProfile()
+  }, [fetchProfile])
 
   const handleLogout = () => {
     clearToken()

@@ -1,6 +1,9 @@
+import { useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import GroupsTab from '../components/home/GroupsTab.jsx'
 import EventsTab from '../components/home/EventsTab.jsx'
+import { useCityStore } from '../store/cityStore.js'
+import { useEventsStore } from '../store/eventsStore.js'
 
 const TABS = [
   { id: 'groups', label: 'Groups' },
@@ -13,6 +16,13 @@ export function Feed() {
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = searchParams.get('tab') === 'events' ? 'events' : 'groups'
   const setTab = (id) => setSearchParams(id === 'groups' ? {} : { tab: id }, { replace: true })
+
+  // Prefetch events in the background so the Events tab is ready when tapped.
+  const activeCityId = useCityStore((s) => s.activeCityId)
+  const fetchEvents = useEventsStore((s) => s.fetchEvents)
+  useEffect(() => {
+    fetchEvents(activeCityId)
+  }, [activeCityId, fetchEvents])
 
   return (
     <div>

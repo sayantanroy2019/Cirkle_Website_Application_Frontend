@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { MapPin, ChevronDown } from 'lucide-react'
-import { useActiveCity } from '../context/ActiveCityContext.jsx'
+import { useActiveCity } from '../store/cityStore.js'
 import { NAV_ITEMS } from './navItems.js'
 import BottomNav from './BottomNav.jsx'
 import Logo from './Logo.jsx'

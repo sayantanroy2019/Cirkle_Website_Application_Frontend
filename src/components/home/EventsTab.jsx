@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useActiveCity } from '../../context/ActiveCityContext.jsx'
-import { api, ApiError } from '../../lib/api.js'
+import { useActiveCity } from '../../store/cityStore.js'
+import { useEventsStore } from '../../store/eventsStore.js'
 import { getEventCategories } from '../../lib/reference.js'
 import EventCard from './EventCard.jsx'
 
@@ -9,10 +9,13 @@ export function EventsTab() {
   const navigate = useNavigate()
   const { activeCityId } = useActiveCity()
 
-  const [events, setEvents] = useState([])
+  // Events come from the shared cache — instant on repeat visits, no refetch.
+  const events = useEventsStore((s) => s.eventsByCity[activeCityId])
+  const loadingCity = useEventsStore((s) => s.loadingCity)
+  const loadError = useEventsStore((s) => s.errorByCity[activeCityId])
+  const fetchEvents = useEventsStore((s) => s.fetchEvents)
+
   const [categories, setCategories] = useState([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [loadError, setLoadError] = useState('')
   const [activeCategory, setActiveCategory] = useState(null) // null = All
 
   // Category chips come from the backend, not a hardcoded list.
@@ -30,36 +33,22 @@ export function EventsTab() {
     }
   }, [])
 
-  // Re-fetch events whenever the active browsing city changes.
+  // Fetch only if this city isn't cached yet; cached cities load instantly.
   useEffect(() => {
-    if (!activeCityId) return
-    let active = true
-    setIsLoading(true)
-    setLoadError('')
-    api
-      .get(`/events?city=${activeCityId}`)
-      .then((data) => {
-        if (active) setEvents(data.events)
-      })
-      .catch((err) => {
-        if (active) setLoadError(err instanceof ApiError ? err.message : 'Could not load events.')
-      })
-      .finally(() => {
-        if (active) setIsLoading(false)
-      })
-    return () => {
-      active = false
-    }
-  }, [activeCityId])
+    fetchEvents(activeCityId)
+  }, [activeCityId, fetchEvents])
+
+  const isLoading = !events && loadingCity === activeCityId
 
   const labelById = useMemo(
     () => Object.fromEntries(categories.map((c) => [c.id, c.label])),
     [categories],
   )
 
+  const cityEvents = events ?? []
   const visibleEvents = activeCategory
-    ? events.filter((e) => e.categoryId === activeCategory)
-    : events
+    ? cityEvents.filter((e) => e.categoryId === activeCategory)
+    : cityEvents
 
   const chips = [{ id: null, label: 'All' }, ...categories]
 

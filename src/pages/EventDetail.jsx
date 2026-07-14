@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Upload, Bookmark, Share2, MoreHorizontal, MapPin, CalendarDays } from 'lucide-react'
 import { api, ApiError } from '../lib/api.js'
+import { useEventsStore, selectEventById } from '../store/eventsStore.js'
 import { formatPrice, formatEventDay, formatEventTime } from '../lib/format.js'
 import BottomNav from '../components/BottomNav.jsx'
 
@@ -307,29 +308,37 @@ export function EventDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
 
-  const [event, setEvent] = useState(null)
-  const [isLoading, setIsLoading] = useState(true)
+  // Serve from the events cache instantly when we already have it (arriving
+  // from the feed); only fetch by id as a fallback (e.g. a direct link).
+  const cachedEvent = useEventsStore(selectEventById(id))
+  const [fetchedEvent, setFetchedEvent] = useState(null)
+  const [isFetching, setIsFetching] = useState(false)
   const [loadError, setLoadError] = useState('')
 
+  const event = cachedEvent ?? fetchedEvent
+
   useEffect(() => {
+    if (cachedEvent) return // already have it — no fetch
     let active = true
-    setIsLoading(true)
+    setIsFetching(true)
     setLoadError('')
     api
       .get(`/events/${id}`)
       .then((data) => {
-        if (active) setEvent(data.event)
+        if (active) setFetchedEvent(data.event)
       })
       .catch((err) => {
         if (active) setLoadError(err instanceof ApiError ? err.message : 'Could not load this event.')
       })
       .finally(() => {
-        if (active) setIsLoading(false)
+        if (active) setIsFetching(false)
       })
     return () => {
       active = false
     }
-  }, [id])
+  }, [id, cachedEvent])
+
+  const isLoading = !event && isFetching
 
   const location = event
     ? [event.venueName, event.venueAddress].filter(Boolean).join(', ')

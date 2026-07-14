@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, X } from 'lucide-react'
-import { useOnboarding } from '../OnboardingContext.jsx'
+import { useOnboarding } from '../../../store/onboardingStore.js'
 import OnboardingHeader from '../components/OnboardingHeader.jsx'
 import { api, ApiError } from '../../../lib/api.js'
 

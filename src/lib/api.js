@@ -1,19 +1,7 @@
 import axios from 'axios'
+import { useAuthStore } from '../store/authStore.js'
 
 const BASE_URL = 'http://localhost:3000'
-const TOKEN_KEY = 'cirkle_token'
-
-export function getToken() {
-  return localStorage.getItem(TOKEN_KEY)
-}
-
-export function setToken(token) {
-  localStorage.setItem(TOKEN_KEY, token)
-}
-
-export function clearToken() {
-  localStorage.removeItem(TOKEN_KEY)
-}
 
 export class ApiError extends Error {
   constructor(message, status) {
@@ -27,7 +15,7 @@ export const api = axios.create({ baseURL: BASE_URL })
 // Attach the JWT to every request unless the call opts out with { auth: false }.
 api.interceptors.request.use((config) => {
   if (config.auth !== false) {
-    const token = getToken()
+    const token = useAuthStore.getState().token
     if (token) config.headers.Authorization = `Bearer ${token}`
   }
   return config

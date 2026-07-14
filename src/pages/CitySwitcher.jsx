@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Search, Check } from 'lucide-react'
-import { useActiveCity } from '../context/ActiveCityContext.jsx'
+import { useActiveCity } from '../store/cityStore.js'
 
 export function CitySwitcher() {
   const navigate = useNavigate()

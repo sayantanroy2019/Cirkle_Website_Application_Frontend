@@ -1,4 +1,4 @@
-import { useActiveCity } from '../../context/ActiveCityContext.jsx'
+import { useActiveCity } from '../../store/cityStore.js'
 
 export function GroupsTab() {
   const { activeCityName } = useActiveCity()

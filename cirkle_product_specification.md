@@ -553,6 +553,33 @@ These rules apply across multiple screens and are easy to accidentally break whe
 
 
 
+## 21A. Client-Side Data Caching (performance)
+
+This is an engineering concern, but it directly shapes how the product *feels*, so it's specified here.
+
+**The problem.** Sub-screens are separate navigation destinations. Drilling from a list into a detail screen (e.g. an event card → Event Detail) unmounts the list. If the list refetches its data every time it mounts, the user pays a network round-trip (a visible loading spinner) not just on first view but *again* every time they hit "back." The same applies to switching away from and back to a tab.
+
+**The rule.** Server data that a screen has already loaded is cached in the app-wide client store, not thrown away when the screen unmounts. On the next visit the screen reads from the cache and renders **instantly, with no spinner**; a fresh network fetch only happens when the data isn't cached yet.
+
+**How it applies:**
+
+- **Cache lists by their filter key.** The events feed is cached per city (`cityId → events[]`). Revisiting a city you've already loaded is instant; a city you haven't loaded fetches once, then caches.
+- **Detail screens read from the list cache first.** A list response already contains the full object for each row, so a detail screen reached from that list should render from the cached object with **zero additional fetches**. Fetching a single record by id is only a fallback — for a deep link or refresh where the list was never loaded.
+- **Prefetch the likely-next data.** Where a tab's data isn't shown by default (e.g. the Feed opens on Groups, not Events), begin loading the other tab's data in the background on arrival, so it's ready by the time the user switches — hiding the first-load latency entirely.
+- **First load is still a real fetch.** Caching removes *repeat* latency; the very first load of any data is bounded by backend/network speed and cannot be eliminated on the client.
+- **Reference data is cached for the whole session.** Static lists that never change mid-session (cities, event categories, lifestyle tags) are fetched once and reused everywhere.
+- **Own-user / shared entity data has a single owning store.** Data that more than one screen needs — first of all the logged-in user's own profile — lives in exactly one store, fetched once. Screens read from it; none of them fetch it independently. This kills the anti-pattern of three screens each calling the same endpoint and holding three copies that can silently disagree.
+- **Concurrent callers share one request.** When several components ask for the same not-yet-loaded data at the same moment (e.g. the Profile screen and the city defaulting both need the profile on launch), the store deduplicates them onto a single in-flight request rather than firing N identical calls.
+- **After a mutation, update the cache in place — don't refetch.** When the user edits data (e.g. Edit Profile → `PATCH /profile/me`), on success the store is updated directly with the new values (optimistic), so the previous screen shows the change instantly with no extra round-trip. This is required when the mutation endpoint returns no body; the client already knows what it sent. A background revalidation may follow, but the user never waits on it.
+
+**Reference implementation** (attendee app, current build):
+- **Events:** a per-city events cache in the client store powers both the Events feed and Event Detail; Event Detail reads the cached event object and only falls back to fetch-by-id for direct links; the Feed prefetches events on arrival while the Groups tab is showing.
+- **Profile:** a single profile store owns the logged-in user's profile — the Profile screen, Edit Profile, and the active-city default all read from it, it fetches once with concurrent calls deduplicated, and a successful edit updates it in place (optimistic) so no screen refetches.
+
+---
+
+
+
 ## 22. Complete Screen Inventory
 
 
