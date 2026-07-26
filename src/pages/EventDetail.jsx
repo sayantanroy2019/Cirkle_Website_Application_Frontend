@@ -27,6 +27,8 @@ const MOCK_ATTENDEES = {
   ],
 }
 
+// Find Your Tribe / Browse Groups — deferred to Phase 2 (groups).
+/*
 const MOCK_GROUPS = [
   {
     id: 1,
@@ -48,6 +50,7 @@ const MOCK_GROUPS = [
     ],
   },
 ]
+*/
 
 // ─── Header ───────────────────────────────────────────────────────────────────
 function EventDetailHeader({ onBack }) {
@@ -99,8 +102,85 @@ function EventHero() {
   )
 }
 
-// ─── Info block ───────────────────────────────────────────────────────────────
-function EventInfoBlock({ title, location, day, time, price }) {
+// The single call-to-action, derived from ticket ownership, event type, and
+// (for invite-only) the user's invitation status.
+function EventCta({
+  userHasTicket,
+  eventType,
+  invitationStatus,
+  isRequestingInvite,
+  onPay,
+  onViewTicket,
+  onRequestInvite,
+}) {
+  const base = 'px-6 py-3 text-[15px] font-bold tracking-wide uppercase'
+
+  if (userHasTicket) {
+    return (
+      <button type="button" onClick={onViewTicket} className={`btn-secondary ${base}`}>
+        You have a ticket →
+      </button>
+    )
+  }
+
+  if (eventType === 'invite_only') {
+    if (invitationStatus === 'accepted') {
+      return <button type="button" onClick={onPay} className={`btn-primary ${base}`}>Pay now</button>
+    }
+    if (invitationStatus === 'pending') {
+      return (
+        <button type="button" disabled className={`btn-primary ${base} opacity-40 pointer-events-none`}>
+          Invitation sent
+        </button>
+      )
+    }
+    if (invitationStatus === 'rejected') {
+      return (
+        <button type="button" disabled className={`btn-secondary ${base} opacity-40 pointer-events-none`}>
+          Access denied
+        </button>
+      )
+    }
+    // null — no request yet
+    return (
+      <button
+        type="button"
+        onClick={onRequestInvite}
+        disabled={isRequestingInvite}
+        className={`btn-primary ${base} disabled:opacity-40 disabled:pointer-events-none`}
+      >
+        {isRequestingInvite ? 'Sending…' : 'Send invitation'}
+      </button>
+    )
+  }
+
+  // open event
+  return <button type="button" onClick={onPay} className={`btn-primary ${base}`}>Join this event</button>
+}
+
+const INVITE_NOTE = {
+  '': 'This is an invite-only event. The organizer approves who can buy a ticket.',
+  pending: 'Request sent. Waiting for the organizer to approve your access.',
+  rejected: "The organizer didn't approve access to this event.",
+  accepted: "You're approved — you can buy your ticket.",
+}
+
+function EventInfoBlock({
+  title,
+  location,
+  day,
+  time,
+  price,
+  userHasTicket,
+  eventType,
+  invitationStatus,
+  isRequestingInvite,
+  onPay,
+  onViewTicket,
+  onRequestInvite,
+}) {
+  const showInviteNote = eventType === 'invite_only' && !userHasTicket
+
   return (
     <div className="bg-cirkle-black px-4 pt-3 pb-4">
       <h2 className="font-body text-[24px] font-bold text-white leading-tight mb-3">{title}</h2>
@@ -119,10 +199,22 @@ function EventInfoBlock({ title, location, day, time, price }) {
 
       <div className="flex items-center justify-between bg-cirkle-card border border-cirkle-border-card rounded-[14px] px-4 py-3">
         <span className="font-body text-[18px] font-semibold text-white">{price}</span>
-        <button type="button" className="btn-primary px-6 py-3 text-[15px] font-bold tracking-wide uppercase">
-          JOIN THIS EVENT
-        </button>
+        <EventCta
+          userHasTicket={userHasTicket}
+          eventType={eventType}
+          invitationStatus={invitationStatus}
+          isRequestingInvite={isRequestingInvite}
+          onPay={onPay}
+          onViewTicket={onViewTicket}
+          onRequestInvite={onRequestInvite}
+        />
       </div>
+
+      {showInviteNote && (
+        <p className="mt-2 font-body text-[13px] text-cirkle-text-muted">
+          {INVITE_NOTE[invitationStatus ?? '']}
+        </p>
+      )}
     </div>
   )
 }
@@ -253,7 +345,8 @@ function EventWhosGoing({ attendees }) {
   )
 }
 
-// ─── Find Your Tribe (mock) ───────────────────────────────────────────────────
+// ─── Find Your Tribe (mock) — deferred to Phase 2 (groups) ────────────────────
+/*
 function GroupCard({ group }) {
   return (
     <div className="flex-shrink-0 flex items-center gap-3 bg-cirkle-input border border-cirkle-border rounded-[14px] p-3 min-w-[160px]">
@@ -302,25 +395,26 @@ function EventFindYourTribe({ groups }) {
     </section>
   )
 }
+*/
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export function EventDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
 
-  // Serve from the events cache instantly when we already have it (arriving
-  // from the feed); only fetch by id as a fallback (e.g. a direct link).
+  // Stale-while-revalidate: paint the cached event instantly (from the feed),
+  // then fetch the detail in the background — the detail carries
+  // userHasTicket/soldOut, which the cached list object lacks. The fetched copy
+  // wins once it arrives.
   const cachedEvent = useEventsStore(selectEventById(id))
   const [fetchedEvent, setFetchedEvent] = useState(null)
-  const [isFetching, setIsFetching] = useState(false)
   const [loadError, setLoadError] = useState('')
+  const [isRequestingInvite, setIsRequestingInvite] = useState(false)
 
-  const event = cachedEvent ?? fetchedEvent
+  const event = fetchedEvent ?? cachedEvent
 
   useEffect(() => {
-    if (cachedEvent) return // already have it — no fetch
     let active = true
-    setIsFetching(true)
     setLoadError('')
     api
       .get(`/events/${id}`)
@@ -328,21 +422,46 @@ export function EventDetail() {
         if (active) setFetchedEvent(data.event)
       })
       .catch((err) => {
-        if (active) setLoadError(err instanceof ApiError ? err.message : 'Could not load this event.')
-      })
-      .finally(() => {
-        if (active) setIsFetching(false)
+        // Only surface an error if there's nothing cached to show.
+        if (active && !cachedEvent) {
+          setLoadError(err instanceof ApiError ? err.message : 'Could not load this event.')
+        }
       })
     return () => {
       active = false
     }
-  }, [id, cachedEvent])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
 
-  const isLoading = !event && isFetching
+  const isLoading = !event && !loadError
 
   const location = event
     ? [event.venueName, event.venueAddress].filter(Boolean).join(', ')
     : ''
+
+  // Merge a field into the currently-shown event (keeps SWR fetched copy authoritative).
+  const patchEvent = (fields) => setFetchedEvent((prev) => ({ ...(prev ?? cachedEvent), ...fields }))
+
+  const handleRequestInvite = async () => {
+    if (isRequestingInvite) return
+    setIsRequestingInvite(true)
+    try {
+      const res = await api.post(`/events/${id}/invitations`)
+      patchEvent({ invitationStatus: res.status ?? 'pending' })
+    } catch (err) {
+      // 409 means a row already exists — resync the real status from the server.
+      if (err instanceof ApiError && err.status === 409) {
+        try {
+          const fresh = await api.get(`/events/${id}`)
+          setFetchedEvent(fresh.event)
+        } catch {
+          /* leave the button as-is */
+        }
+      }
+    } finally {
+      setIsRequestingInvite(false)
+    }
+  }
 
   return (
     <div className="bg-cirkle-black min-h-screen pb-[60px]">
@@ -365,12 +484,19 @@ export function EventDetail() {
               day={formatEventDay(event.startsAt)}
               time={formatEventTime(event.startsAt)}
               price={formatPrice(event.price)}
+              userHasTicket={event.userHasTicket}
+              eventType={event.eventType}
+              invitationStatus={event.invitationStatus}
+              isRequestingInvite={isRequestingInvite}
+              onPay={() => navigate(`/checkout/${event.id}`)}
+              onViewTicket={() => navigate('/tickets')}
+              onRequestInvite={handleRequestInvite}
             />
             {event.description && <EventAbout about={event.description} />}
             <EventLineup lineup={MOCK_LINEUP} />
             <EventVenue name={event.venueName} address={event.venueAddress} />
             <EventWhosGoing attendees={MOCK_ATTENDEES} />
-            <EventFindYourTribe groups={MOCK_GROUPS} />
+            {/* <EventFindYourTribe groups={MOCK_GROUPS} /> — deferred to Phase 2 (groups) */}
           </>
         )}
       </main>
