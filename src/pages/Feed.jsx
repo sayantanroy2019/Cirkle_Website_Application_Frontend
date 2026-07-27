@@ -1,12 +1,12 @@
 import { useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import GroupsTab from '../components/home/GroupsTab.jsx'
+import VibesTab from '../components/home/VibesTab.jsx'
 import EventsTab from '../components/home/EventsTab.jsx'
 import { useCityStore } from '../store/cityStore.js'
 import { useEventsStore } from '../store/eventsStore.js'
 
 const TABS = [
-  { id: 'groups', label: 'Groups' },
+  { id: 'vibes', label: 'Vibes' },
   { id: 'events', label: 'Events' },
 ]
 
@@ -14,8 +14,8 @@ export function Feed() {
   // Keep the active sub-tab in the URL so returning here (e.g. back from an
   // event detail) restores the tab the user was on instead of resetting.
   const [searchParams, setSearchParams] = useSearchParams()
-  const tab = searchParams.get('tab') === 'events' ? 'events' : 'groups'
-  const setTab = (id) => setSearchParams(id === 'groups' ? {} : { tab: id }, { replace: true })
+  const tab = searchParams.get('tab') === 'events' ? 'events' : 'vibes'
+  const setTab = (id) => setSearchParams(id === 'vibes' ? {} : { tab: id }, { replace: true })
 
   // Prefetch events in the background so the Events tab is ready when tapped.
   const activeCityId = useCityStore((s) => s.activeCityId)
@@ -49,7 +49,7 @@ export function Feed() {
         </div>
       </div>
 
-      {tab === 'groups' ? <GroupsTab /> : <EventsTab />}
+      {tab === 'vibes' ? <VibesTab /> : <EventsTab />}
     </div>
   )
 }

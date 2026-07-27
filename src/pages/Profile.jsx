@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronRight, Pencil } from 'lucide-react'
 import { useAuthStore } from '../store/authStore.js'
 import { useProfileStore } from '../store/profileStore.js'
+import { resetUserStores } from '../store/session.js'
 
 const HELP_ROWS = ['Check for updates', 'Contact us', 'Manage account']
 const LEGAL_ROWS = ['Privacy policy', 'Terms of use', 'Safety guidelines']
@@ -47,10 +48,12 @@ export function Profile() {
 
   const handleLogout = () => {
     clearToken()
+    resetUserStores()
     navigate('/')
   }
 
   const initial = profile?.firstName?.[0]?.toUpperCase() ?? ''
+  const mainPhotoUrl = profile?.photos?.find((p) => p.position === 0)?.url ?? profile?.photos?.[0]?.url
 
   return (
     <div className="px-6 py-6 max-w-[480px] mx-auto">
@@ -60,8 +63,12 @@ export function Profile() {
 
       {/* Header: photo · name · edit */}
       <div className="flex items-center gap-4">
-        <span className="w-16 h-16 rounded-full bg-gradient-to-br from-cirkle-chip to-cirkle-border-card border border-cirkle-border-card flex items-center justify-center font-display text-2xl text-white">
-          {initial}
+        <span className="w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-cirkle-chip to-cirkle-border-card border border-cirkle-border-card flex items-center justify-center font-display text-2xl text-white shrink-0">
+          {mainPhotoUrl ? (
+            <img src={mainPhotoUrl} alt="" className="w-full h-full object-cover" />
+          ) : (
+            initial
+          )}
         </span>
         <div className="flex-1 min-w-0">
           <p className="font-body text-[18px] font-bold text-white truncate">

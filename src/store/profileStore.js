@@ -38,4 +38,9 @@ export const useProfileStore = create((set, get) => ({
   // Merge edited fields into the cached profile after a successful PATCH.
   applyUpdate: (fields) =>
     set((s) => ({ profile: s.profile ? { ...s.profile, ...fields } : fields })),
+
+  reset: () => {
+    inFlight = null // drop any in-flight fetch for the previous user
+    set({ profile: null, isLoading: false, error: '' })
+  },
 }))

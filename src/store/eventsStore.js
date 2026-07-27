@@ -28,6 +28,8 @@ export const useEventsStore = create((set, get) => ({
       set((s) => (s.loadingCity === cityId ? { loadingCity: null } : {}))
     }
   },
+
+  reset: () => set({ eventsByCity: {}, loadingCity: null, errorByCity: {} }),
 }))
 
 // Selector factory: find a cached event by id across all cities (detail page).

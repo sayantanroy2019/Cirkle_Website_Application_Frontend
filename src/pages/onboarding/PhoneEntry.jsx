@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Phone } from 'lucide-react'
 import { api, ApiError } from '../../lib/api.js'
 import { useAuthStore } from '../../store/authStore.js'
+import { resetUserStores } from '../../store/session.js'
 import { routeForOnboardingStep } from './onboardingRoutes.js'
 
 const PHONE_REGEX = /^[6-9]\d{9}$/
@@ -33,6 +34,7 @@ export function PhoneEntry() {
     setApiError('')
     try {
       const data = await api.post('/auth/login', { phone: `+91${phone}` }, { auth: false })
+      resetUserStores() // clear any previous user's cached data
       setToken(data.token)
       navigate(routeForOnboardingStep(data))
     } catch (err) {

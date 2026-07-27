@@ -34,6 +34,8 @@ export const useCityStore = create((set, get) => ({
   },
 
   setActiveCityId: (id) => set({ activeCityId: id }),
+
+  reset: () => set({ cities: [], activeCityId: '', isLoading: false, loaded: false }),
 }))
 
 // Drop-in replacement for the old context hook. Triggers the one-time load and

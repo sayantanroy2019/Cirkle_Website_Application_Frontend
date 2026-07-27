@@ -14,6 +14,7 @@
     "@fontsource/inter": "^5.2.8",
     "@tailwindcss/vite": "^4.3.2",
     "axios": "^1.18.1",
+    "heic2any": "^0.0.4",
     "lucide-react": "^1.23.0",
     "qrcode": "^1.5.4",
     "react": "^19.2.6",

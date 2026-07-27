@@ -40,6 +40,22 @@ function TicketStub({ ticket, onClick }) {
   )
 }
 
+function TicketStubSkeleton() {
+  return (
+    <div className="card-dark overflow-hidden animate-pulse">
+      <div className="p-4">
+        <div className="h-4 w-2/3 rounded bg-cirkle-input" />
+        <div className="mt-3 h-3 w-1/2 rounded bg-cirkle-input" />
+        <div className="mt-2 h-3 w-2/5 rounded bg-cirkle-input" />
+      </div>
+      <div className="border-t border-dashed border-cirkle-border-card" />
+      <div className="px-4 py-3">
+        <div className="h-3 w-1/3 rounded bg-cirkle-input" />
+      </div>
+    </div>
+  )
+}
+
 export function MyTickets() {
   const navigate = useNavigate()
   const [filter, setFilter] = useState('upcoming')
@@ -88,9 +104,8 @@ export function MyTickets() {
       </div>
 
       <div className="mt-5 flex flex-col gap-4">
-        {isLoading && (
-          <p className="font-body text-[14px] text-cirkle-text-muted">Loading…</p>
-        )}
+        {isLoading &&
+          Array.from({ length: 3 }).map((_, i) => <TicketStubSkeleton key={i} />)}
         {loadError && (
           <p className="font-body text-[14px] text-red-400">{loadError}</p>
         )}

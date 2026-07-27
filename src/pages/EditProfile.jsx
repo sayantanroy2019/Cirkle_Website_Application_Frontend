@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, X, Lock } from 'lucide-react'
+import { ArrowLeft, Lock } from 'lucide-react'
 import { api, ApiError } from '../lib/api.js'
 import { getLifestyleTags } from '../lib/reference.js'
 import { useProfileStore } from '../store/profileStore.js'
+import PhotoGrid from '../components/PhotoGrid.jsx'
+import { keyFromPhotoUrl } from '../lib/uploads.js'
 
 const MIN_NAME = 2
 const MIN_PHOTOS = 2
@@ -14,6 +16,33 @@ const BIO_MAX = 300
 
 // Phone isn't exposed by the API yet — mock value for the locked row.
 const MOCK_PHONE = '+91 98765 43210'
+
+// Shimmer placeholder shaped like the form while the profile loads.
+function EditProfileSkeleton() {
+  return (
+    <div className="px-6 py-6 max-w-[480px] mx-auto animate-pulse">
+      <div className="h-3 w-16 rounded bg-cirkle-input" />
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        <div className="aspect-square rounded-xl bg-cirkle-input" />
+        <div className="aspect-square rounded-xl bg-cirkle-input" />
+        <div className="aspect-square rounded-xl bg-cirkle-input" />
+        <div className="aspect-square rounded-xl bg-cirkle-input" />
+      </div>
+      <div className="mt-7 flex flex-col gap-4">
+        <div className="h-[46px] rounded-[10px] bg-cirkle-input" />
+        <div className="h-[46px] rounded-[10px] bg-cirkle-input" />
+        <div className="h-[46px] rounded-[10px] bg-cirkle-input" />
+        <div className="h-24 rounded-[10px] bg-cirkle-input" />
+      </div>
+      <div className="mt-6 flex flex-wrap gap-2">
+        <div className="h-8 w-20 rounded-full bg-cirkle-input" />
+        <div className="h-8 w-16 rounded-full bg-cirkle-input" />
+        <div className="h-8 w-24 rounded-full bg-cirkle-input" />
+        <div className="h-8 w-14 rounded-full bg-cirkle-input" />
+      </div>
+    </div>
+  )
+}
 
 export function EditProfile() {
   const navigate = useNavigate()
@@ -30,13 +59,12 @@ export function EditProfile() {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [bio, setBio] = useState('')
-  // photos: { uid, s3Key|null, url|null } — existing have s3Key, new have a preview url
+  // Reported by PhotoGrid: { uid, key, previewUrl, status, ... }
   const [photos, setPhotos] = useState([])
   const [selectedTagIds, setSelectedTagIds] = useState([])
 
   const [isSaving, setIsSaving] = useState(false)
   const [apiError, setApiError] = useState('')
-  const fileInputRef = useRef(null)
 
   // Ensure the shared profile is loaded and fetch the tag catalogue.
   useEffect(() => {
@@ -52,11 +80,6 @@ export function EditProfile() {
     setFirstName(profile.firstName ?? '')
     setLastName(profile.lastName ?? '')
     setBio(profile.bio ?? '')
-    setPhotos(
-      [...profile.photos]
-        .sort((a, b) => a.position - b.position)
-        .map((ph) => ({ uid: ph.id, s3Key: ph.s3Key, url: null })),
-    )
     setSelectedTagIds(profile.lifestyleTags.map((t) => t.id))
     setSeeded(true)
   }, [profile, seeded])
@@ -64,12 +87,21 @@ export function EditProfile() {
   const isLoading = !seeded && !profileError
   const loadError = profileError || tagsError
 
-  // Revoke preview URLs on unmount.
-  const photosRef = useRef(photos)
-  photosRef.current = photos
-  useEffect(
-    () => () => photosRef.current.forEach((p) => p.url && URL.revokeObjectURL(p.url)),
-    [],
+  // Existing photos for the grid: recover the s3Key from the presigned url.
+  const initialPhotos = useMemo(
+    () =>
+      profile
+        ? [...profile.photos]
+            .sort((a, b) => a.position - b.position)
+            .map((ph) => ({
+              uid: ph.id,
+              key: keyFromPhotoUrl(ph.url),
+              previewUrl: ph.url,
+              status: 'done',
+              isObjectUrl: false,
+            }))
+        : [],
+    [profile],
   )
 
   const categories = useMemo(() => {
@@ -86,28 +118,6 @@ export function EditProfile() {
     return groups
   }, [allTags])
 
-  const handleFiles = (e) => {
-    const files = Array.from(e.target.files)
-    setPhotos((prev) => {
-      const room = MAX_PHOTOS - prev.length
-      const additions = files.slice(0, room).map((file) => ({
-        uid: crypto.randomUUID(),
-        s3Key: null,
-        url: URL.createObjectURL(file),
-      }))
-      return [...prev, ...additions]
-    })
-    e.target.value = ''
-  }
-
-  const removePhoto = (uid) => {
-    setPhotos((prev) => {
-      const target = prev.find((p) => p.uid === uid)
-      if (target?.url) URL.revokeObjectURL(target.url)
-      return prev.filter((p) => p.uid !== uid)
-    })
-  }
-
   const toggleTag = (id) => {
     setSelectedTagIds((prev) => {
       if (prev.includes(id)) return prev.filter((x) => x !== id)
@@ -118,7 +128,9 @@ export function EditProfile() {
 
   const tagCount = selectedTagIds.length
   const nameValid = firstName.trim().length >= MIN_NAME && lastName.trim().length >= MIN_NAME
-  const photosValid = photos.length >= MIN_PHOTOS
+  const photosAllDone = photos.length > 0 && photos.every((p) => p.status === 'done')
+  const photosValid = photosAllDone && photos.length >= MIN_PHOTOS && photos.length <= MAX_PHOTOS
+  const anyUploading = photos.some((p) => p.status === 'uploading')
   const tagsValid = tagCount >= MIN_TAGS && tagCount <= MAX_TAGS
   const canSave = nameValid && photosValid && tagsValid && !isSaving
 
@@ -126,11 +138,7 @@ export function EditProfile() {
     if (!canSave) return
     setIsSaving(true)
     setApiError('')
-    // New photos have no real S3 key yet — synthesize (upload flow is stubbed).
-    const payloadPhotos = photos.map((p, i) => ({
-      s3Key: p.s3Key ?? `profiles/local/photo-${i}.jpg`,
-      position: i,
-    }))
+    const payloadPhotos = photos.map((p, i) => ({ s3Key: p.key, position: i }))
     try {
       await api.patch('/profile/me', {
         firstName: firstName.trim(),
@@ -140,7 +148,8 @@ export function EditProfile() {
         photos: payloadPhotos,
       })
       // Update the shared profile in place (PATCH returns no body) so Profile
-      // shows the new values instantly without a refetch.
+      // shows the new values instantly without a refetch. Photos keep their
+      // preview urls for now; a later fetch brings fresh presigned urls.
       applyProfileUpdate({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
@@ -148,7 +157,7 @@ export function EditProfile() {
         lifestyleTags: selectedTagIds
           .map((id) => allTags.find((t) => t.id === id))
           .filter(Boolean),
-        photos: payloadPhotos,
+        photos: photos.map((p, i) => ({ id: p.uid, url: p.previewUrl, position: i })),
       })
       navigate('/profile')
     } catch (err) {
@@ -183,9 +192,7 @@ export function EditProfile() {
         </button>
       </header>
 
-      {isLoading && (
-        <p className="px-6 mt-6 font-body text-[14px] text-cirkle-text-muted">Loading…</p>
-      )}
+      {isLoading && <EditProfileSkeleton />}
       {loadError && (
         <p className="px-6 mt-6 font-body text-[14px] text-red-400">{loadError}</p>
       )}
@@ -194,60 +201,14 @@ export function EditProfile() {
         <div className="px-6 py-6 max-w-[480px] mx-auto">
           {/* Photos */}
           <p className="font-body text-label uppercase font-bold text-cirkle-text-muted">Photos</p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handleFiles}
-            className="hidden"
-          />
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            {slots.map((photo, i) => {
-              if (photo) {
-                return (
-                  <div key={photo.uid} className="relative aspect-square rounded-xl overflow-hidden border border-cirkle-border-card bg-gradient-to-br from-cirkle-chip to-cirkle-border-card">
-                    {photo.url && (
-                      <img src={photo.url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
-                    )}
-                    {i === 0 && (
-                      <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-cirkle-yellow text-cirkle-text-dark font-body text-[11px] font-bold">
-                        Main
-                      </span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => removePhoto(photo.uid)}
-                      className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full bg-black/60 text-white transition-all duration-200 hover:bg-black/80"
-                      aria-label={`Remove photo ${i + 1}`}
-                    >
-                      <X size={14} strokeWidth={2.5} />
-                    </button>
-                  </div>
-                )
-              }
-              const isAddSlot = i === firstEmpty
-              return (
-                <button
-                  key={`empty-${i}`}
-                  type="button"
-                  onClick={isAddSlot ? () => fileInputRef.current?.click() : undefined}
-                  disabled={!isAddSlot}
-                  className={`aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-1 transition-all duration-200 ${
-                    isAddSlot
-                      ? 'border-cirkle-border-card text-cirkle-text-muted hover:border-cirkle-yellow hover:text-cirkle-yellow cursor-pointer'
-                      : 'border-cirkle-border/60 text-cirkle-border-card cursor-default'
-                  }`}
-                  aria-label={isAddSlot ? 'Add photo' : `Empty slot ${i + 1}`}
-                >
-                  <Plus size={22} strokeWidth={2} />
-                  {isAddSlot && <span className="font-body text-[11px] font-semibold">Add</span>}
-                </button>
-              )
-            })}
+          <div className="mt-3">
+            <PhotoGrid initialPhotos={initialPhotos} onChange={setPhotos} max={MAX_PHOTOS} />
           </div>
-          {!photosValid && (
+          {!photosValid && !anyUploading && (
             <p className="mt-2 font-body text-[13px] text-red-400">Add at least {MIN_PHOTOS} photos.</p>
+          )}
+          {anyUploading && (
+            <p className="mt-2 font-body text-[13px] text-cirkle-text-muted">Uploading…</p>
           )}
 
           {/* Name */}
