@@ -41,7 +41,7 @@ export function GenderStep() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col px-6 py-6">
+    <div className="h-[100dvh] overflow-hidden flex flex-col px-6 py-6">
       <OnboardingHeader step={3} />
 
       <form onSubmit={handleSubmit} className="flex-1 flex flex-col justify-center max-w-[400px] w-full mx-auto">
