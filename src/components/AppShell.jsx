@@ -27,9 +27,12 @@ export function AppShell() {
   const openCitySwitcher = () => navigate('/city')
 
   return (
-    <div className="min-h-screen pb-[60px] md:pb-0">
+    // Full-height flex column: header / scrolling main / (tab bar) / bottom nav.
+    // The bars are flex siblings of the single scroll area, never position:fixed —
+    // so they can't drift on iOS Chrome (which mishandles fixed during scroll).
+    <div className="h-[100dvh] flex flex-col overflow-hidden">
       {/* Top bar */}
-      <header className="fixed top-0 inset-x-0 z-50 bg-cirkle-black border-b border-cirkle-border">
+      <header className="flex-none bg-cirkle-black border-b border-cirkle-border">
         {/* Desktop: logo left · nav center · location right */}
         <div className="hidden md:grid grid-cols-[1fr_auto_1fr] items-center max-w-[1040px] mx-auto px-6 h-16">
           <div className="justify-self-start">
@@ -64,10 +67,15 @@ export function AppShell() {
         </div>
       </header>
 
-      {/* Page content */}
-      <main className="pt-14 md:pt-16 max-w-[1040px] mx-auto">
-        <Outlet />
+      {/* The only scroll area */}
+      <main id="app-scroll" className="flex-1 min-h-0 overflow-y-auto">
+        <div className="max-w-[1040px] mx-auto w-full">
+          <Outlet />
+        </div>
       </main>
+
+      {/* Slot for a tab-specific bottom bar (e.g. the Vibes bar portals in here) */}
+      <div id="tab-bottom-bar" className="flex-none empty:hidden" />
 
       {/* Bottom nav (mobile / tablet only) */}
       <BottomNav />

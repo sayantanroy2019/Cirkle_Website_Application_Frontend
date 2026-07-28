@@ -45,7 +45,7 @@ export function PhoneEntry() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col px-6 py-6">
+    <div className="min-h-[100dvh] flex flex-col px-6 py-6">
       <button
         type="button"
         onClick={() => navigate('/')}
@@ -76,7 +76,7 @@ export function PhoneEntry() {
               showError ? 'border-red-400' : 'border-cirkle-border-card focus-within:border-cirkle-yellow'
             }`}
           >
-            <span className="pl-4 pr-3 py-3 font-body text-[14px] text-white border-r border-cirkle-border-card">
+            <span className="pl-4 pr-3 py-3 font-body text-[16px] text-white border-r border-cirkle-border-card">
               +91
             </span>
             <input
@@ -87,7 +87,7 @@ export function PhoneEntry() {
               value={phone}
               onChange={handleChange}
               onBlur={() => setTouched(true)}
-              className="flex-1 bg-transparent px-4 py-3 font-body text-[14px] text-white placeholder:text-cirkle-text-placeholder outline-none"
+              className="flex-1 bg-transparent px-4 py-3 font-body text-[16px] text-white placeholder:text-cirkle-text-placeholder outline-none"
               aria-label="Phone number"
             />
           </div>

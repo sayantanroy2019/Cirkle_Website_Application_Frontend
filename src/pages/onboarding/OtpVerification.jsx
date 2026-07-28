@@ -56,7 +56,7 @@ export function OtpVerification() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col px-6 py-6">
+    <div className="min-h-[100dvh] flex flex-col px-6 py-6">
       <button
         type="button"
         onClick={() => navigate('/phone')}

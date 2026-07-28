@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Sparkles, Music2, Martini, Plane, Users, CalendarDays, MapPin } from 'lucide-react'
 import { useVibesStore } from '../../store/vibesStore.js'
@@ -41,7 +42,7 @@ function PhotoHero({ person, photoIndex, onTapLeft, onTapRight, onImageError }) 
   const total = Math.max(photos.length, 1)
   const currentUrl = photos[photoIndex]?.url
   return (
-    <div className="relative w-full h-[60vh] bg-gradient-to-br from-cirkle-chip to-cirkle-black overflow-hidden">
+    <div className="relative w-full aspect-[4/5] bg-gradient-to-br from-cirkle-chip to-cirkle-black overflow-hidden">
       {/* Story-style photo progress segments (top) */}
       {photos.length > 1 && (
         <div className="absolute top-3 inset-x-3 z-10 flex gap-1.5">
@@ -136,11 +137,17 @@ export function VibesTab() {
   const setIndex = useVibesStore((s) => s.setIndex)
 
   const [photoIndex, setPhotoIndex] = useState(0)
+  const [barSlot, setBarSlot] = useState(null)
   const refetchedForExpiry = useRef(false)
 
   useEffect(() => {
     fetchVibes()
   }, [fetchVibes])
+
+  // Portal target for the Vibes bar lives in the app shell; grab it after mount.
+  useEffect(() => {
+    setBarSlot(document.getElementById('tab-bottom-bar'))
+  }, [])
 
   // A photo failing to load usually means its presigned URL expired — pull a
   // fresh feed (with fresh URLs) once, rather than showing broken images.
@@ -150,10 +157,10 @@ export function VibesTab() {
     fetchVibes({ force: true })
   }
 
-  // New person → reset to their first photo and scroll back up to the photo.
+  // New person → reset to their first photo and scroll the feed back to the top.
   useEffect(() => {
     setPhotoIndex(0)
-    window.scrollTo({ top: 0 })
+    document.getElementById('app-scroll')?.scrollTo({ top: 0 })
   }, [index])
 
   if (error && !cards) {
@@ -173,7 +180,7 @@ export function VibesTab() {
   const tapRight = () => setPhotoIndex((i) => Math.min(photoCount - 1, i + 1))
 
   return (
-    <div className="pb-[150px]">
+    <div className="pb-6 max-w-[440px] mx-auto">
       {/* Keyed for a quick crossfade when moving between people */}
       <div key={clampedIndex} className="animate-[fadeUp_0.2s_ease]">
         <PhotoHero
@@ -210,36 +217,41 @@ export function VibesTab() {
         )}
       </div>
 
-      {/* Fixed Vibes bar — above the mobile footer nav (which is md:hidden) */}
-      <div className="fixed bottom-[60px] md:bottom-0 inset-x-0 z-40 bg-cirkle-black border-t border-cirkle-border">
-        <div className="max-w-[1040px] mx-auto flex items-center gap-3 px-4 py-3">
-          <button
-            type="button"
-            onClick={goPrev}
-            disabled={clampedIndex === 0}
-            className="w-11 h-11 shrink-0 flex items-center justify-center rounded-full border border-cirkle-border-card text-white transition-all duration-200 hover:border-cirkle-yellow hover:text-cirkle-yellow disabled:opacity-30 disabled:pointer-events-none"
-            aria-label="Previous person"
-          >
-            <ChevronLeft size={22} strokeWidth={2} />
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate(`/events/${event.id}`)}
-            className="btn-primary flex-1 py-3.5 text-[15px] font-bold"
-          >
-            Join me
-          </button>
-          <button
-            type="button"
-            onClick={goNext}
-            disabled={clampedIndex === cards.length - 1}
-            className="w-11 h-11 shrink-0 flex items-center justify-center rounded-full border border-cirkle-border-card text-white transition-all duration-200 hover:border-cirkle-yellow hover:text-cirkle-yellow disabled:opacity-30 disabled:pointer-events-none"
-            aria-label="Next person"
-          >
-            <ChevronRight size={22} strokeWidth={2} />
-          </button>
-        </div>
-      </div>
+      {/* Vibes bar — rendered into the app shell's non-scrolling slot (above the
+          bottom nav) so it stays put without position:fixed. */}
+      {barSlot &&
+        createPortal(
+          <div className="bg-cirkle-black border-t border-cirkle-border">
+            <div className="max-w-[440px] mx-auto flex items-center gap-3 px-4 py-3">
+              <button
+                type="button"
+                onClick={goPrev}
+                disabled={clampedIndex === 0}
+                className="w-11 h-11 shrink-0 flex items-center justify-center rounded-full border border-cirkle-border-card text-white transition-all duration-200 hover:border-cirkle-yellow hover:text-cirkle-yellow disabled:opacity-30 disabled:pointer-events-none"
+                aria-label="Previous person"
+              >
+                <ChevronLeft size={22} strokeWidth={2} />
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate(`/events/${event.id}`)}
+                className="btn-primary flex-1 py-3.5 text-[15px] font-bold"
+              >
+                Join me
+              </button>
+              <button
+                type="button"
+                onClick={goNext}
+                disabled={clampedIndex === cards.length - 1}
+                className="w-11 h-11 shrink-0 flex items-center justify-center rounded-full border border-cirkle-border-card text-white transition-all duration-200 hover:border-cirkle-yellow hover:text-cirkle-yellow disabled:opacity-30 disabled:pointer-events-none"
+                aria-label="Next person"
+              >
+                <ChevronRight size={22} strokeWidth={2} />
+              </button>
+            </div>
+          </div>,
+          barSlot,
+        )}
     </div>
   )
 }

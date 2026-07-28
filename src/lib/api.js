@@ -1,7 +1,10 @@
 import axios from 'axios'
 import { useAuthStore } from '../store/authStore.js'
 
-const BASE_URL = 'http://localhost:3000'
+// Dev: call the same-origin `/api` path, which vite.config.js proxies to the
+// backend (no CORS). Production: call the backend URL from the environment
+// directly. The real backend URL is never hardcoded — it lives in VITE_API_BASE_URL.
+const BASE_URL = import.meta.env.DEV ? '/api' : import.meta.env.VITE_API_BASE_URL
 
 export class ApiError extends Error {
   constructor(message, status) {
@@ -10,7 +13,13 @@ export class ApiError extends Error {
   }
 }
 
-export const api = axios.create({ baseURL: BASE_URL })
+export const api = axios.create({
+  baseURL: BASE_URL,
+  // Skip ngrok's HTML interstitial on the first API call from a fresh browser.
+  // Scoped to this instance (not global axios) so the direct-to-S3 photo PUT
+  // stays header-clean. Ignored by non-ngrok backends.
+  headers: { 'ngrok-skip-browser-warning': 'true' },
+})
 
 // Attach the JWT to every request unless the call opts out with { auth: false }.
 api.interceptors.request.use((config) => {

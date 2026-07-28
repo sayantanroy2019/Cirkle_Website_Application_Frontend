@@ -55,7 +55,7 @@ const MOCK_GROUPS = [
 // ─── Header ───────────────────────────────────────────────────────────────────
 function EventDetailHeader({ onBack }) {
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-cirkle-black flex items-center justify-between px-4 h-14">
+    <header className="flex-none bg-cirkle-black flex items-center justify-between px-4 h-14">
       <button
         type="button"
         onClick={onBack}
@@ -464,10 +464,10 @@ export function EventDetail() {
   }
 
   return (
-    <div className="bg-cirkle-black min-h-screen pb-[60px]">
+    <div className="bg-cirkle-black h-[100dvh] flex flex-col overflow-hidden">
       <EventDetailHeader onBack={() => navigate(-1)} />
 
-      <main className="pt-14">
+      <main className="flex-1 min-h-0 overflow-y-auto">
         {isLoading && (
           <p className="px-4 mt-6 font-body text-[14px] text-cirkle-text-muted">Loading…</p>
         )}

@@ -26,8 +26,8 @@ export function Feed() {
 
   return (
     <div>
-      {/* Sub-tab toggle — segmented pill, active half filled. Sticks below the fixed top nav */}
-      <div className="sticky top-14 md:top-16 z-40 bg-cirkle-black px-6 py-3">
+      {/* Sub-tab toggle — sticks to the top of the scroll area (below the header) */}
+      <div className="sticky top-0 z-40 bg-cirkle-black px-6 py-3">
         <div className="flex gap-1 p-1 rounded-full bg-cirkle-input border border-cirkle-border-card max-w-[340px] mx-auto">
           {TABS.map(({ id, label }) => {
             const isActive = tab === id

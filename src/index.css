@@ -127,7 +127,7 @@
   /* Input */
   .input-dark {
     @apply bg-cirkle-input border border-cirkle-border-card rounded-[10px]
-           px-4 py-3 font-body text-[14px] text-white w-full outline-none
+           px-4 py-3 font-body text-[16px] text-white w-full outline-none
            transition-all duration-200 placeholder:text-cirkle-text-placeholder
            focus:border-cirkle-yellow;
   }
