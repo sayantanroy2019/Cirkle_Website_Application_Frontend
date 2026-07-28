@@ -43,7 +43,7 @@ export function PhotosStep() {
     <div className="h-[100dvh] overflow-hidden flex flex-col px-6 py-6">
       <OnboardingHeader step={6} />
 
-      <form onSubmit={handleSubmit} className="flex-1 flex flex-col justify-center max-w-[400px] w-full mx-auto">
+      <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto flex flex-col max-w-[400px] w-full mx-auto pt-6">
         <h1 className="font-display text-section-lg text-white uppercase">Add your photos</h1>
         <p className="mt-3 font-body text-[15px] text-cirkle-text-muted">
           Add {MIN_PHOTOS}–{MAX_PHOTOS}. Your first photo is your Main — make sure it shows your face.
