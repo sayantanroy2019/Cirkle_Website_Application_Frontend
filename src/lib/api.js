@@ -6,6 +6,15 @@ import { useAuthStore } from '../store/authStore.js'
 // directly. The real backend URL is never hardcoded — it lives in VITE_API_BASE_URL.
 const BASE_URL = import.meta.env.DEV ? '/api' : import.meta.env.VITE_API_BASE_URL
 
+// In a production build the backend URL is baked in at build time. If it's
+// missing, requests would silently hit the app's own origin (404) — warn loudly.
+if (!import.meta.env.DEV && !BASE_URL) {
+  console.error(
+    '[api] VITE_API_BASE_URL is not set. Add it in the deploy environment ' +
+      '(Vercel → Settings → Environment Variables) and REDEPLOY — Vite embeds env vars at build time.',
+  )
+}
+
 export class ApiError extends Error {
   constructor(message, status) {
     super(message)
