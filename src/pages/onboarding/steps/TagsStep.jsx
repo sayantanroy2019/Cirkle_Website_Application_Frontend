@@ -85,7 +85,7 @@ export function TagsStep() {
     <div className="h-[100dvh] overflow-hidden flex flex-col px-6 py-6">
       <OnboardingHeader step={5} />
 
-      <form onSubmit={handleSubmit} className="flex-1 flex flex-col max-w-[400px] w-full mx-auto pt-6">
+      <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto flex flex-col max-w-[400px] w-full mx-auto pt-6">
         <h1 className="font-display text-section-lg text-white uppercase">
           What are you into?
         </h1>
@@ -93,7 +93,7 @@ export function TagsStep() {
           Pick {MIN_TAGS}–{MAX_TAGS}. These show on your card and help you find your crew.
         </p>
 
-        <div className="mt-4 flex-1 min-h-0 overflow-y-auto pb-4">
+        <div className="mt-4 pb-4">
           {isLoading && (
             <p className="mt-4 text-center font-body text-[14px] text-cirkle-text-muted">
               Loading tags…
