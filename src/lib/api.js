@@ -30,12 +30,21 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Unwrap to response.data on success; convert failures to ApiError with the
-// server's message so screens can show it inline instead of a generic string.
+// Always resolve to a human-readable string so screens never render an object
+// (which coerces to the literal "[object Object]").
+function errorMessage(err) {
+  const data = err.response?.data
+  // Backend error shapes: { error: "..." } or { error: { message } } or { message }.
+  if (typeof data?.error === 'string') return data.error
+  if (typeof data?.error?.message === 'string') return data.error.message
+  if (typeof data?.message === 'string') return data.message
+  // No response at all → the request never reached the server (network/CORS/DNS).
+  if (!err.response) return 'Could not reach the server. Please check your connection and try again.'
+  return 'Something went wrong. Please try again.'
+}
+
+// Unwrap to response.data on success; convert failures to ApiError otherwise.
 api.interceptors.response.use(
   (res) => res.data,
-  (err) => {
-    const message = err.response?.data?.error || 'Something went wrong. Please try again.'
-    return Promise.reject(new ApiError(message, err.response?.status))
-  },
+  (err) => Promise.reject(new ApiError(errorMessage(err), err.response?.status)),
 )
