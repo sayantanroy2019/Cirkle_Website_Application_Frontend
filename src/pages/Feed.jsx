@@ -25,9 +25,9 @@ export function Feed() {
   }, [activeCityId, fetchEvents])
 
   return (
-    <div>
-      {/* Sub-tab toggle — sticks to the top of the scroll area (below the header) */}
-      <div className="sticky top-0 z-40 bg-cirkle-black px-6 py-3">
+    <div className="h-full flex flex-col">
+      {/* Sub-tab toggle — fixed at the top of the feed area */}
+      <div className="flex-none bg-cirkle-black px-6 py-3">
         <div className="flex gap-1 p-1 rounded-full bg-cirkle-input border border-cirkle-border-card max-w-[340px] mx-auto">
           {TABS.map(({ id, label }) => {
             const isActive = tab === id
@@ -49,7 +49,10 @@ export function Feed() {
         </div>
       </div>
 
-      {tab === 'vibes' ? <VibesTab /> : <EventsTab />}
+      {/* Tab content fills the rest; each tab manages its own scroll */}
+      <div className="flex-1 min-h-0">
+        {tab === 'vibes' ? <VibesTab /> : <EventsTab />}
+      </div>
     </div>
   )
 }

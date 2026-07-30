@@ -69,7 +69,7 @@ export function AppShell() {
 
       {/* The only scroll area */}
       <main id="app-scroll" className="flex-1 min-h-0 overflow-y-auto">
-        <div className="max-w-[1040px] mx-auto w-full">
+        <div className="max-w-[1040px] mx-auto w-full h-full">
           <Outlet />
         </div>
       </main>

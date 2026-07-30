@@ -12,7 +12,9 @@
   "dependencies": {
     "@fontsource/bebas-neue": "^5.2.7",
     "@fontsource/inter": "^5.2.8",
+    "@react-spring/web": "^10.1.2",
     "@tailwindcss/vite": "^4.3.2",
+    "@use-gesture/react": "^10.3.1",
     "axios": "^1.18.1",
     "heic2any": "^0.0.4",
     "lucide-react": "^1.23.0",

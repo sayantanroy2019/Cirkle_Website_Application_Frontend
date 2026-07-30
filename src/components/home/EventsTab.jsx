@@ -53,7 +53,7 @@ export function EventsTab() {
   const chips = [{ id: null, label: 'All' }, ...categories]
 
   return (
-    <div>
+    <div className="h-full overflow-y-auto">
       {/* Category filter chips */}
       <div className="flex gap-2 overflow-x-auto px-6 py-4 scrollbar-hide">
         {chips.map((c) => {
