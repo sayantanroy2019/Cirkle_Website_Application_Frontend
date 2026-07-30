@@ -159,7 +159,7 @@ GET /vibes
 
 ## 10. Screen Structure & Navigation
 
-The Vibes screen is a **fixed navigation shell around a scrollable profile.** One person's card fills the screen at a time; the user moves between people with arrows and reads more about the current person by scrolling.
+The Vibes screen is a **swipeable card deck around a scrollable profile.** One person's card fills the screen at a time; the user moves between people by swiping the card horizontally (Tinder/Hinge/Bumble style) and reads more about the current person by scrolling.
 
 ### The vertical layout (top to bottom)
 
@@ -168,27 +168,25 @@ The Vibes screen is a **fixed navigation shell around a scrollable profile.** On
 │  App top navigation          │  ← fixed, exists app-wide
 ├─────────────────────────────┤
 │                             │
-│   PROFILE CONTENT           │  ← scrollable region
+│   PROFILE CARD              │  ← swipeable + scrollable
 │   (one person at a time)    │
-│                             │
-├─────────────────────────────┤
-│  Vibes bar:  ◀  Join me  ▶  │  ← fixed, Vibes-tab-only
+│                  [ Join me ]│  ← floating, bottom-right
 ├─────────────────────────────┤
 │  App footer navigation tabs  │  ← fixed, exists app-wide
 └─────────────────────────────┘
 ```
 
-The **Vibes bar** (◀ / Join me / ▶) is unique to the Vibes tab. It does not appear on any other tab (Events, Tickets, Profile). It sits directly above the app's footer navigation tabs.
+There is **no fixed Vibes bar** with arrows. Navigation between people is done by swiping the card itself, and the **Join me** button floats over the bottom-right corner of the card. Neither appears on any other tab (Events, Tickets, Profile).
 
 ### Three distinct navigation axes
 
 The screen has three separate ways to move, and they must not be conflated:
 
-1. **Between people — horizontal, via the arrows only.** The ◀ and ▶ in the Vibes bar move to the previous / next person in the feed. There is **no swipe gesture** — navigation between people is arrows-only. (This is a deliberate choice to keep the screen from reading as a dating-app swipe deck.)
+1. **Between people — horizontal swipe (Tinder-style physics).** The card follows the finger, tilts as it moves, and when flicked far or fast enough throws off-screen while the next person's card is revealed behind it. A weak drag springs back to center. **Swipe left = next person, swipe right = previous person.** Swiping is pure navigation — it never accepts, rejects, or acts on anyone; at the ends of the feed the card simply springs back with no looping. (The horizontal drag is axis-locked, so a vertical drag scrolls instead of swiping — see axis 2.)
 
-2. **Within a person — vertical scroll.** Scrolling down reveals more of the current person's details. The whole profile is not crammed into one screen; it flows naturally and the user scrolls to see it all.
+2. **Within a person — vertical scroll.** Scrolling down reveals more of the current person's details. The whole profile is not crammed into one screen; it flows naturally and the user scrolls to see it all. Vertical drags scroll the profile and never trigger a horizontal swipe.
 
-3. **Between a person's photos — horizontal, via dots.** A person has up to 4 photos. These are navigated with a dots/pagination indicator in the industry-standard way (like Instagram/Hinge photo carousels) — the user moves through *this person's* photos without changing which person they're viewing.
+3. **Between a person's photos — tap the photo.** A person has up to 4 photos. Tapping the left or right half of the photo moves to the previous / next of *this person's* photos, with a progress-bar indicator across the top (Hinge/Instagram-story style) — the user moves through this person's photos without changing which person they're viewing.
 
 ### The scroll order of profile content
 
@@ -201,9 +199,9 @@ Within one person's scrollable area, content appears in this order top to bottom
 5. **Interests** (lifestyle tags).
 6. Any remaining detail.
 
-### The "Join me" button (in the Vibes bar)
+### The "Join me" button (floating, bottom-right)
 
-The center of the Vibes bar. Tapping it routes the viewer to the event detail page of **the event the currently-displayed person is attending**. From there, the event's own button logic applies (open → "Join this event", invite-only → "Send invitation"). "Join me" is navigation only — it does not itself purchase or send anything.
+A pill floating over the bottom-right corner of the card. Tapping it routes the viewer to the event detail page of **the event the currently-displayed person is attending**. From there, the event's own button logic applies (open → "Join this event", invite-only → "Send invitation"). "Join me" is navigation only — it does not itself purchase or send anything.
 
 ---
 

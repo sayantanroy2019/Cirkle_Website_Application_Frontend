@@ -21,7 +21,10 @@ export function Landing() {
   return (
     <div className="min-h-[100dvh] flex flex-col items-center justify-center px-6 py-12 text-center">
       {/* Wordmark */}
-      <Logo className="opacity-0 animate-[fadeUp_0.5s_ease_forwards]" />
+      <Logo
+        size="text-[56px] md:text-[68px]"
+        className="opacity-0 animate-[fadeUp_0.5s_ease_forwards] leading-none"
+      />
 
       {/* Tagline */}
       <div

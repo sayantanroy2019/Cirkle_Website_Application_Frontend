@@ -115,7 +115,7 @@ Each step is its own full screen with a progress bar (`step / 7`) and a back arr
 
 Once onboarded, the app has **4 persistent bottom-navigation tabs**, each a root of its own navigation stack:
 
-1. **Feed** — discovery (Groups tab + Events tab)
+1. **Feed** — discovery (Vibes tab + Events tab)
 2. **My Groups** — every group relationship the person currently has, across all events
 3. **My Tickets** — every ticket the person has purchased, regardless of group status
 4. **Profile** — account settings hub
@@ -139,9 +139,13 @@ Reached via the Feed tab. Has its own header (separate from the screen content b
 
 
 
-### 5.2 Groups tab (default sub-tab)
+### 5.2 Vibes tab (default sub-tab)
 
-Shows a feed of **anchor cards** — one card per group still open to new members, for events relevant to the person's city. Each card shows:
+> **Phase note.** In the current build the default sub-tab is the **Vibes feed** — a discovery surface built on ticket data (one card per person's ticket), fully specified in `cirkle_vibes_feed.md`. The **anchor-card Groups feed** described below is the Phase 2 group-formation view. Both are "the first sub-tab of the Feed"; the Vibes feed is what ships first, and its cards route to events rather than forming groups.
+
+**Vibes feed (Phase 1) — a swipeable card deck.** One person's card fills the area at a time. The user moves between people by **swiping the card horizontally, Tinder/Hinge/Bumble style**: the card follows the finger, tilts, and throws off-screen when flicked, revealing the next person's card behind it; a weak drag springs back. **Swipe left = next person, swipe right = previous**, pure navigation with no accept/reject and no looping at the ends. Vertical scroll reveals the rest of the current person's profile (axis-locked so it never fights the swipe), and tapping the left/right half of the photo moves through that person's photos. A **Join me** pill floats in the **bottom-right corner** of the card and routes to that person's event detail page (navigation only — see `cirkle_vibes_feed.md` §5). There are no on-card arrows and no fixed bottom bar.
+
+**Groups feed (Phase 2) — anchor cards.** Shows a feed of **anchor cards** — one card per group still open to new members, for events relevant to the person's city. Each card shows:
 
 - Anchor's main photo
 - Anchor's name and age
