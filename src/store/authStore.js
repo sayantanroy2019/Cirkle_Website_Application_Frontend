@@ -6,8 +6,14 @@ export const useAuthStore = create(
   persist(
     (set) => ({
       token: null,
+      // Client-side "show once" flag for the post-onboarding walkthrough.
+      // Reset on each login so a fresh onboarding on the same device shows it;
+      // set true when the walkthrough is dismissed.
+      walkthroughSeen: false,
       setToken: (token) => set({ token }),
-      clearToken: () => set({ token: null }),
+      clearToken: () => set({ token: null, walkthroughSeen: false }),
+      markWalkthroughSeen: () => set({ walkthroughSeen: true }),
+      resetWalkthrough: () => set({ walkthroughSeen: false }),
     }),
     { name: 'cirkle-auth' },
   ),

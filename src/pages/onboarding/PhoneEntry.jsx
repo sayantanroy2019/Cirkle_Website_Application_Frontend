@@ -11,6 +11,7 @@ const PHONE_REGEX = /^[6-9]\d{9}$/
 export function PhoneEntry() {
   const navigate = useNavigate()
   const setToken = useAuthStore((s) => s.setToken)
+  const resetWalkthrough = useAuthStore((s) => s.resetWalkthrough)
   const [phone, setPhone] = useState('')
   const [touched, setTouched] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -35,6 +36,7 @@ export function PhoneEntry() {
     try {
       const data = await api.post('/auth/login', { phone: `+91${phone}` }, { auth: false })
       resetUserStores() // clear any previous user's cached data
+      resetWalkthrough() // a fresh onboarding should see the walkthrough again
       setToken(data.token)
       navigate(routeForOnboardingStep(data))
     } catch (err) {
@@ -87,7 +89,7 @@ export function PhoneEntry() {
               value={phone}
               onChange={handleChange}
               onBlur={() => setTouched(true)}
-              className="flex-1 bg-transparent px-4 py-3 font-body text-[16px] text-white placeholder:text-cirkle-text-placeholder outline-none"
+              className="flex-1 bg-transparent px-4 py-3 font-body text-[16px] text-white placeholder:text-cirkle-text-placeholder appearance-none [-webkit-appearance:none] outline-none focus:outline-none [box-shadow:none] [-webkit-tap-highlight-color:transparent]"
               aria-label="Phone number"
             />
           </div>

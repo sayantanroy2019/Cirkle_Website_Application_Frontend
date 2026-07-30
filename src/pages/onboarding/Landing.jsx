@@ -69,7 +69,7 @@ export function Landing() {
           ))}
         </div>
         <p className="font-body text-[14px] text-cirkle-text-light text-left">
-          <span className="font-bold text-white">2,400+</span> people finding crews in Delhi
+          <span className="font-bold text-white">2,400+</span> people finding their own crew in India.
         </p>
       </div>
 

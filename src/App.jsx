@@ -8,6 +8,7 @@ import CityStep from './pages/onboarding/steps/CityStep.jsx'
 import TagsStep from './pages/onboarding/steps/TagsStep.jsx'
 import PhotosStep from './pages/onboarding/steps/PhotosStep.jsx'
 import EmailStep from './pages/onboarding/steps/EmailStep.jsx'
+import Walkthrough from './pages/onboarding/Walkthrough.jsx'
 import AppShell from './components/AppShell.jsx'
 import Feed from './pages/Feed.jsx'
 import MyGroups from './pages/MyGroups.jsx'
@@ -34,6 +35,7 @@ function App() {
         <Route path="photos" element={<PhotosStep />} />
         <Route path="email" element={<EmailStep />} />
       </Route>
+      <Route path="/walkthrough" element={<Walkthrough />} />
       <Route element={<AppShell />}>
         <Route path="/feed" element={<Feed />} />
         <Route path="/groups" element={<MyGroups />} />

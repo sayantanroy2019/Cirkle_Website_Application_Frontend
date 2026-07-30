@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Check } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { useOnboarding } from '../../../store/onboardingStore.js'
 import OnboardingHeader from '../components/OnboardingHeader.jsx'
 import { api, ApiError } from '../../../lib/api.js'
@@ -14,7 +14,6 @@ export function CityStep() {
   const [loadError, setLoadError] = useState('')
 
   const [cityId, setCityId] = useState(profile.cityId)
-  const [query, setQuery] = useState('')
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [apiError, setApiError] = useState('')
@@ -36,10 +35,6 @@ export function CityStep() {
       active = false
     }
   }, [])
-
-  const filteredCities = cities.filter((c) =>
-    c.name.toLowerCase().includes(query.trim().toLowerCase()),
-  )
 
   const isValid = Boolean(cityId)
 
@@ -66,25 +61,13 @@ export function CityStep() {
 
       <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto flex flex-col max-w-[400px] w-full mx-auto pt-6">
         <h1 className="font-display text-section-lg text-white uppercase">
-          Where are you based?
+          Where are you from?
         </h1>
         <p className="mt-3 font-body text-[15px] text-cirkle-text-muted">
           This decides which events and groups you see.
         </p>
 
-        <div className="mt-6 relative">
-          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-cirkle-text-placeholder" strokeWidth={2} />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search city"
-            className="input-dark pl-11"
-            aria-label="Search city"
-          />
-        </div>
-
-        <div className="mt-4 flex flex-col gap-2 pb-4">
+        <div className="mt-6 flex flex-col gap-2 pb-4">
           {isLoading && (
             <p className="mt-4 text-center font-body text-[14px] text-cirkle-text-muted">
               Loading cities…
@@ -95,12 +78,7 @@ export function CityStep() {
               {loadError}
             </p>
           )}
-          {!isLoading && !loadError && filteredCities.length === 0 && (
-            <p className="mt-4 text-center font-body text-[14px] text-cirkle-text-muted">
-              No cities match "{query}".
-            </p>
-          )}
-          {filteredCities.map((c) => {
+          {cities.map((c) => {
             const isSelected = cityId === c.id
             return (
               <button

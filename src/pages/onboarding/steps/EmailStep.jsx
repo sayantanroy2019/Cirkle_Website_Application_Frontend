@@ -30,7 +30,7 @@ export function EmailStep() {
     try {
       await api.patch('/onboarding/step/7', { email: trimmed })
       updateProfile({ email: trimmed })
-      navigate('/feed')
+      navigate('/walkthrough', { replace: true })
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Something went wrong. Please try again.'
       setApiError(message)
