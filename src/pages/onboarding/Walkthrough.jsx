@@ -234,20 +234,22 @@ export function Walkthrough() {
           return (
             <div
               key={headline}
-              className="shrink-0 w-screen h-full flex flex-col items-center justify-center px-8 text-center pt-[calc(env(safe-area-inset-top)+3rem)] pb-[calc(env(safe-area-inset-bottom)+11rem)]"
+              className="shrink-0 w-screen h-full overflow-y-auto scrollbar-hide"
             >
-              <div className="flex-1 flex items-center justify-center">
-                <Visual />
-              </div>
-              <div
-                className={`w-full max-w-[400px] ${active ? 'animate-[fadeUp_0.5s_ease_forwards]' : 'opacity-0'}`}
-              >
-                <h1 className="font-body text-[28px] font-medium text-white leading-tight tracking-tight">
-                  {headline}
-                </h1>
-                <p className="mt-3 font-body text-[15px] text-cirkle-text-light leading-[1.6] max-w-[340px] mx-auto">
-                  {body}
-                </p>
+              <div className="min-h-full flex flex-col items-center justify-center gap-10 px-8 text-center pt-[calc(env(safe-area-inset-top)+4rem)] pb-[calc(env(safe-area-inset-bottom)+11rem)]">
+                <div className="flex items-center justify-center">
+                  <Visual />
+                </div>
+                <div
+                  className={`w-full max-w-[400px] ${active ? 'animate-[fadeUp_0.5s_ease_forwards]' : 'opacity-0'}`}
+                >
+                  <h1 className="font-body text-[28px] font-medium text-white leading-tight tracking-tight">
+                    {headline}
+                  </h1>
+                  <p className="mt-3 font-body text-[15px] text-cirkle-text-light leading-[1.6] max-w-[340px] mx-auto">
+                    {body}
+                  </p>
+                </div>
               </div>
             </div>
           )
