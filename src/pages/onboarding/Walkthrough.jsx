@@ -5,9 +5,17 @@ import { useDrag } from '@use-gesture/react'
 import { Music2, CalendarDays, MapPin, Ticket, ArrowRight, ChevronLeft } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 
+// Drop a licensed portrait (Unsplash/Pexels — free for commercial use) at
+// public/walkthrough/aisha.jpg. If it's missing, cards fall back to the
+// initial-letter design automatically, so nothing breaks.
+const FACE_AISHA = '/walkthrough/aisha.jpg'
+
 // A card built from the app's own visual vocabulary (photo hero + event strip +
 // Join me pill), used as the hero illustration on each walkthrough screen.
-function MockCard({ initial = 'A', name = 'Aisha', age = 24, joinGlow = false, youBadge = false }) {
+// `photo` is optional — if it's missing or fails to load, the card falls back
+// to the initial-letter design so the walkthrough never shows a broken image.
+function MockCard({ initial = 'A', name = 'Aisha', age = 24, joinGlow = false, youBadge = false, photo }) {
+  const [photoOk, setPhotoOk] = useState(Boolean(photo))
   return (
     <div
       className={`relative w-[230px] rounded-[20px] overflow-hidden bg-cirkle-card border shadow-[0_24px_60px_-18px_rgba(0,0,0,0.75)] ${
@@ -16,15 +24,23 @@ function MockCard({ initial = 'A', name = 'Aisha', age = 24, joinGlow = false, y
     >
       {/* Photo hero */}
       <div className="relative aspect-[4/5] bg-gradient-to-br from-cirkle-chip to-cirkle-black overflow-hidden">
-        <div className="absolute top-3 inset-x-3 flex gap-1.5">
-          <span className="h-[3px] flex-1 rounded-full bg-white" />
-          <span className="h-[3px] flex-1 rounded-full bg-white/30" />
-          <span className="h-[3px] flex-1 rounded-full bg-white/30" />
-        </div>
         <div className="absolute inset-0 flex items-center justify-center">
           <span className="font-display text-[110px] leading-none text-white/12 uppercase select-none">
             {initial}
           </span>
+        </div>
+        {photo && photoOk && (
+          <img
+            src={photo}
+            alt={name}
+            onError={() => setPhotoOk(false)}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        )}
+        <div className="absolute top-3 inset-x-3 flex gap-1.5">
+          <span className="h-[3px] flex-1 rounded-full bg-white" />
+          <span className="h-[3px] flex-1 rounded-full bg-white/30" />
+          <span className="h-[3px] flex-1 rounded-full bg-white/30" />
         </div>
         {youBadge && (
           <span className="absolute top-6 left-3 inline-flex items-center px-2.5 py-1 rounded-full bg-cirkle-yellow text-cirkle-text-dark font-body text-[11px] font-bold uppercase tracking-wide">
@@ -72,17 +88,20 @@ function MockCard({ initial = 'A', name = 'Aisha', age = 24, joinGlow = false, y
 }
 
 // Screen 1 — stacked deck with a tilted peek behind, plus the swipe hint.
+// Height is intrinsic (front card + hint) so it never spills into the text.
 function DiscoverVisual() {
   return (
-    <div className="relative w-[230px] h-[360px]">
-      <div className="absolute inset-0 translate-x-6 rotate-[7deg] scale-[0.94] opacity-45">
-        <MockCard initial="R" name="Rohan" age={26} />
+    <div className="w-[230px]">
+      <div className="relative">
+        <div className="absolute inset-0 translate-x-6 rotate-[7deg] scale-[0.94] opacity-45">
+          <MockCard initial="R" name="Rohan" age={26} />
+        </div>
+        <div className="relative">
+          <MockCard initial="A" name="Aisha" age={24} photo={FACE_AISHA} />
+        </div>
       </div>
-      <div className="absolute inset-0">
-        <MockCard initial="A" name="Aisha" age={24} />
-      </div>
-      {/* Swipe-left hint */}
-      <div className="absolute -bottom-11 inset-x-0 flex items-center justify-center gap-2 text-cirkle-text-muted">
+      {/* Swipe-left hint — in normal flow beneath the card */}
+      <div className="mt-6 flex items-center justify-center gap-2 text-cirkle-text-muted">
         <ChevronLeft
           size={22}
           strokeWidth={2.5}
@@ -96,11 +115,12 @@ function DiscoverVisual() {
 }
 
 // Screen 2 — a card whose Join me pill glows, with a ticket "you're in" beat.
+// The ticket sits over the card's own box, adding no height of its own.
 function JoinVisual() {
   return (
-    <div className="relative w-[230px] h-[360px] flex items-center justify-center">
-      <MockCard initial="A" name="Aisha" age={24} joinGlow />
-      <div className="absolute -right-3 -bottom-4 flex items-center gap-2 px-3 py-2 rounded-full bg-cirkle-card border border-cirkle-border-card shadow-[0_10px_30px_-8px_rgba(0,0,0,0.7)]">
+    <div className="relative w-[230px]">
+      <MockCard initial="A" name="Aisha" age={24} joinGlow photo={FACE_AISHA} />
+      <div className="absolute right-[-10px] bottom-8 flex items-center gap-2 px-3 py-2 rounded-full bg-cirkle-card border border-cirkle-border-card shadow-[0_10px_30px_-8px_rgba(0,0,0,0.7)]">
         <Ticket size={16} className="text-cirkle-yellow" strokeWidth={2} />
         <span className="font-body text-[12px] font-bold text-white">You're in</span>
       </div>
@@ -108,12 +128,13 @@ function JoinVisual() {
   )
 }
 
-// Screen 3 — the user's own card, lit up as it joins the feed.
+// Screen 3 — the user's own card, lit up as it joins the feed. The glow is
+// absolutely positioned (no layout height); the card defines the box.
 function YourTurnVisual() {
   return (
-    <div className="relative w-[230px] h-[360px] flex items-center justify-center">
+    <div className="relative w-[230px]">
       <div
-        className="absolute w-[240px] h-[300px] rounded-full blur-3xl bg-cirkle-yellow/20"
+        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[240px] h-[300px] rounded-full blur-3xl bg-cirkle-yellow/20"
         style={{ animation: 'softPulse 2.4s ease-in-out infinite' }}
       />
       <div className="relative">
