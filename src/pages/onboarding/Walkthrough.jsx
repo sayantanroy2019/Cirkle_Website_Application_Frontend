@@ -234,13 +234,13 @@ export function Walkthrough() {
           return (
             <div
               key={headline}
-              className="shrink-0 w-screen h-full flex flex-col items-center justify-center px-8 text-center"
+              className="shrink-0 w-screen h-full flex flex-col items-center justify-center px-8 text-center pt-[calc(env(safe-area-inset-top)+3rem)] pb-[calc(env(safe-area-inset-bottom)+11rem)]"
             >
-              <div className="flex-1 flex items-center justify-center pt-10">
+              <div className="flex-1 flex items-center justify-center">
                 <Visual />
               </div>
               <div
-                className={`w-full max-w-[400px] pb-4 ${active ? 'animate-[fadeUp_0.5s_ease_forwards]' : 'opacity-0'}`}
+                className={`w-full max-w-[400px] ${active ? 'animate-[fadeUp_0.5s_ease_forwards]' : 'opacity-0'}`}
               >
                 <h1 className="font-body text-[28px] font-medium text-white leading-tight tracking-tight">
                   {headline}
