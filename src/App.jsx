@@ -20,6 +20,9 @@ import EditProfile from './pages/EditProfile.jsx'
 import Checkout from './pages/Checkout.jsx'
 import PaymentSuccess from './pages/PaymentSuccess.jsx'
 import TicketDetail from './pages/TicketDetail.jsx'
+import PrivacyPolicy from './pages/legal/PrivacyPolicy.jsx'
+import TermsOfUse from './pages/legal/TermsOfUse.jsx'
+import SafetyGuidelines from './pages/legal/SafetyGuidelines.jsx'
 
 function App() {
   return (
@@ -48,6 +51,9 @@ function App() {
       <Route path="/checkout/:eventId" element={<Checkout />} />
       <Route path="/payment/success" element={<PaymentSuccess />} />
       <Route path="/tickets/:id" element={<TicketDetail />} />
+      <Route path="/legal/privacy" element={<PrivacyPolicy />} />
+      <Route path="/legal/terms" element={<TermsOfUse />} />
+      <Route path="/legal/safety" element={<SafetyGuidelines />} />
     </Routes>
   )
 }
