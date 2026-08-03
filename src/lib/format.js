@@ -42,3 +42,15 @@ export function formatEventDay(iso) {
 export function formatEventTime(iso) {
   return timeFmt.format(new Date(iso))
 }
+
+// Handles are stored bare ("cirkle"), but tolerate a pasted "@cirkle" or a full
+// profile URL so a sloppy value from the organizer portal still links correctly.
+export function instagramUrl(handle) {
+  if (!handle) return null
+  const clean = String(handle)
+    .trim()
+    .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '')
+    .replace(/^@/, '')
+    .replace(/\/+$/, '')
+  return clean ? `https://instagram.com/${clean}` : null
+}

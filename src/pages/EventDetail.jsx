@@ -3,19 +3,15 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Upload, Bookmark, Share2, MoreHorizontal, MapPin, CalendarDays } from 'lucide-react'
 import { api, ApiError } from '../lib/api.js'
 import { useEventsStore, selectEventById } from '../store/eventsStore.js'
-import { formatPrice, formatEventDay, formatEventTime } from '../lib/format.js'
+import { formatPrice, formatEventDay, formatEventTime, instagramUrl } from '../lib/format.js'
 import BottomNav from '../components/BottomNav.jsx'
+import ArtistAvatar from '../components/ArtistAvatar.jsx'
+import InstagramIcon from '../components/InstagramIcon.jsx'
 
 // ─── MOCK DATA ────────────────────────────────────────────────────────────────
-// The backend does not provide lineup, attendees, or groups yet. These are
-// placeholders — replace with real API data once those endpoints exist.
-const MOCK_LINEUP = [
-  { id: 1, name: 'DJ Nucleya', image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=100&q=80' },
-  { id: 2, name: 'Sanaya K', image: 'https://images.unsplash.com/photo-1601412436009-d964bd02edbc?w=100&q=80' },
-  { id: 3, name: 'The Local Train', image: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=100&q=80' },
-  { id: 4, name: 'TBA', image: 'https://images.unsplash.com/photo-1614786269829-d24616faf56d?w=100&q=80' },
-]
-
+// The backend does not provide attendees or groups yet. These are placeholders —
+// replace with real API data once those endpoints exist. (Lineup is real: it
+// comes from `event.artists` on GET /events/:id.)
 const MOCK_ATTENDEES = {
   count: 24,
   overflow: 19,
@@ -171,6 +167,7 @@ function EventInfoBlock({
   day,
   time,
   price,
+  organizerInstagram,
   userHasTicket,
   eventType,
   invitationStatus,
@@ -180,6 +177,7 @@ function EventInfoBlock({
   onRequestInvite,
 }) {
   const showInviteNote = eventType === 'invite_only' && !userHasTicket
+  const organizerIgUrl = instagramUrl(organizerInstagram)
 
   return (
     <div className="bg-cirkle-black px-4 pt-3 pb-4">
@@ -190,12 +188,25 @@ function EventInfoBlock({
         <span className="font-body text-[14px] font-normal text-cirkle-text-muted">{location}</span>
       </div>
 
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-2">
         <CalendarDays size={15} strokeWidth={2} className="text-cirkle-text-muted flex-shrink-0" />
         <span className="font-body text-[14px] font-normal text-cirkle-text-muted">{day} · {time}</span>
       </div>
 
-      <hr className="border-cirkle-border mb-4" />
+      {/* Organizer's Instagram — deliberately understated: just the handle, linked out. */}
+      {organizerIgUrl && (
+        <a
+          href={organizerIgUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 mb-2 text-cirkle-text-muted transition-colors duration-200 hover:text-cirkle-yellow"
+        >
+          <InstagramIcon size={15} className="flex-shrink-0" />
+          <span className="font-body text-[14px] font-normal">@{organizerInstagram.replace(/^@/, '')}</span>
+        </a>
+      )}
+
+      <hr className="border-cirkle-border mb-4 mt-2" />
 
       <div className="flex items-center justify-between bg-cirkle-card border border-cirkle-border-card rounded-[14px] px-4 py-3">
         <span className="font-body text-[18px] font-semibold text-white">{price}</span>
@@ -244,27 +255,19 @@ function EventAbout({ about }) {
   )
 }
 
-// ─── Lineup (mock) ────────────────────────────────────────────────────────────
-function PerformerAvatar({ performer }) {
-  return (
-    <div className="flex flex-col items-center gap-2" style={{ width: 'calc(25% - 8px)' }}>
-      <div className="w-[72px] h-[72px] rounded-full overflow-hidden border-2 border-cirkle-border-card flex-shrink-0">
-        <img src={performer.image} alt={performer.name} loading="lazy" className="w-full h-full object-cover" />
-      </div>
-      <span className="font-body text-[12px] font-medium text-white text-center leading-tight">
-        {performer.name}
-      </span>
-    </div>
-  )
-}
+// ─── Lineup ───────────────────────────────────────────────────────────────────
+// Artists come back from the API already ordered by position (headliner = 0),
+// but sort defensively so the headliner leads regardless of response order.
+function EventLineup({ artists }) {
+  const ordered = [...artists].sort((a, b) => a.position - b.position)
 
-function EventLineup({ lineup }) {
   return (
     <section className="bg-cirkle-black px-4 pt-5 pb-4">
       <h3 className="font-body text-[20px] font-bold text-white mb-4">Lineup</h3>
-      <div className="flex items-start justify-between">
-        {lineup.map((performer) => (
-          <PerformerAvatar key={performer.id} performer={performer} />
+      {/* Scrolls horizontally — a lineup can be longer than one screen width. */}
+      <div className="flex items-start gap-4 overflow-x-auto scrollbar-hide -mx-4 px-4">
+        {ordered.map((artist) => (
+          <ArtistAvatar key={artist.id} artist={artist} />
         ))}
       </div>
       <hr className="border-cirkle-border mt-5" />
@@ -484,6 +487,7 @@ export function EventDetail() {
               day={formatEventDay(event.startsAt)}
               time={formatEventTime(event.startsAt)}
               price={formatPrice(event.price)}
+              organizerInstagram={event.organizerInstagram}
               userHasTicket={event.userHasTicket}
               eventType={event.eventType}
               invitationStatus={event.invitationStatus}
@@ -493,7 +497,7 @@ export function EventDetail() {
               onRequestInvite={handleRequestInvite}
             />
             {event.description && <EventAbout about={event.description} />}
-            <EventLineup lineup={MOCK_LINEUP} />
+            {event.artists?.length > 0 && <EventLineup artists={event.artists} />}
             <EventVenue name={event.venueName} address={event.venueAddress} />
             <EventWhosGoing attendees={MOCK_ATTENDEES} />
             {/* <EventFindYourTribe groups={MOCK_GROUPS} /> — deferred to Phase 2 (groups) */}
