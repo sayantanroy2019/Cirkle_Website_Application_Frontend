@@ -7,6 +7,8 @@ import { formatPrice, formatEventDay, formatEventTime, instagramUrl } from '../l
 import BottomNav from '../components/BottomNav.jsx'
 import ArtistAvatar from '../components/ArtistAvatar.jsx'
 import InstagramIcon from '../components/InstagramIcon.jsx'
+import SocialHandlesDialog from '../components/SocialHandlesDialog.jsx'
+import { socialGateMissing, PLATFORM_LABELS } from '../lib/socialHandles.js'
 
 // ─── MOCK DATA ────────────────────────────────────────────────────────────────
 // The backend does not provide attendees or groups yet. These are placeholders —
@@ -168,6 +170,7 @@ function EventInfoBlock({
   time,
   price,
   organizerInstagram,
+  requiredHandles,
   userHasTicket,
   eventType,
   invitationStatus,
@@ -224,6 +227,15 @@ function EventInfoBlock({
       {showInviteNote && (
         <p className="mt-2 font-body text-[13px] text-cirkle-text-muted">
           {INVITE_NOTE[invitationStatus ?? '']}
+        </p>
+      )}
+
+      {/* Heads-up so the gate isn't a surprise at checkout. The server still
+          enforces it — this is only a warning, and it's pointless once they
+          already hold a ticket. */}
+      {!userHasTicket && requiredHandles.length > 0 && (
+        <p className="mt-2 font-body text-[13px] text-cirkle-text-muted">
+          Requires your {requiredHandles.map((p) => PLATFORM_LABELS[p]).join(' and ')} to attend.
         </p>
       )}
     </div>
@@ -413,6 +425,8 @@ export function EventDetail() {
   const [fetchedEvent, setFetchedEvent] = useState(null)
   const [loadError, setLoadError] = useState('')
   const [isRequestingInvite, setIsRequestingInvite] = useState(false)
+  // Non-null when an action was blocked by the social-handle gate.
+  const [gateMissing, setGateMissing] = useState(null)
 
   const event = fetchedEvent ?? cachedEvent
 
@@ -442,6 +456,14 @@ export function EventDetail() {
     ? [event.venueName, event.venueAddress].filter(Boolean).join(', ')
     : ''
 
+  // Flags are only present on the detail response, so the cached list object
+  // yields an empty list until the fetch lands.
+  const requiredHandles = [
+    event?.requireFacebook && 'facebook',
+    event?.requireInstagram && 'instagram',
+    event?.requireLinkedin && 'linkedin',
+  ].filter(Boolean)
+
   // Merge a field into the currently-shown event (keeps SWR fetched copy authoritative).
   const patchEvent = (fields) => setFetchedEvent((prev) => ({ ...(prev ?? cachedEvent), ...fields }))
 
@@ -452,6 +474,14 @@ export function EventDetail() {
       const res = await api.post(`/events/${id}/invitations`)
       patchEvent({ invitationStatus: res.status ?? 'pending' })
     } catch (err) {
+      // The social-handle gate runs before the invitation row is created, so
+      // nothing was written — collect the handles and retry. Branching on the
+      // response code leaves the invite-only 403 to its existing handling.
+      const missing = err instanceof ApiError ? socialGateMissing(err) : null
+      if (missing) {
+        setGateMissing(missing)
+        return
+      }
       // 409 means a row already exists — resync the real status from the server.
       if (err instanceof ApiError && err.status === 409) {
         try {
@@ -488,6 +518,7 @@ export function EventDetail() {
               time={formatEventTime(event.startsAt)}
               price={formatPrice(event.price)}
               organizerInstagram={event.organizerInstagram}
+              requiredHandles={requiredHandles}
               userHasTicket={event.userHasTicket}
               eventType={event.eventType}
               invitationStatus={event.invitationStatus}
@@ -504,6 +535,19 @@ export function EventDetail() {
           </>
         )}
       </main>
+
+      {gateMissing && (
+        <SocialHandlesDialog
+          missing={gateMissing}
+          // Cancel abandons the request — the gate runs before the invitation
+          // row is created, so nothing was written.
+          onCancel={() => setGateMissing(null)}
+          onSaved={async () => {
+            setGateMissing(null)
+            await handleRequestInvite()
+          }}
+        />
+      )}
 
       <BottomNav activeTo="/feed" />
     </div>

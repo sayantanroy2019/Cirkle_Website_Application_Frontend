@@ -4,6 +4,11 @@ import { ChevronRight, Pencil, Eye, CalendarDays } from 'lucide-react'
 import { useAuthStore } from '../store/authStore.js'
 import { useProfileStore } from '../store/profileStore.js'
 import { resetUserStores } from '../store/session.js'
+import {
+  SOCIAL_PLATFORMS,
+  PLATFORM_LABELS,
+  PROFILE_URL_BUILDERS,
+} from '../lib/socialHandles.js'
 
 const HELP_ROWS = [
   { label: 'Check for updates' },
@@ -119,6 +124,24 @@ function ProfilePreviewCard({ profile }) {
         <p className="px-5 pt-4 font-body text-[14px] italic text-cirkle-text-muted">
           Add a bio so people get your vibe.
         </p>
+      )}
+
+      {/* Social handles — only the ones that are set. */}
+      {SOCIAL_PLATFORMS.some((p) => profile[p]) && (
+        <div className="px-5 pt-4 flex flex-wrap gap-2">
+          {SOCIAL_PLATFORMS.filter((p) => profile[p]).map((platform) => (
+            <a
+              key={platform}
+              href={PROFILE_URL_BUILDERS[platform](profile[platform])}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cirkle-chip font-body text-[13px] font-semibold text-cirkle-text-light transition-colors duration-200 hover:text-cirkle-yellow"
+            >
+              <span className="text-cirkle-text-muted">{PLATFORM_LABELS[platform]}</span>
+              {profile[platform]}
+            </a>
+          ))}
+        </div>
       )}
 
       {/* Lifestyle tags */}

@@ -16,9 +16,13 @@ if (!import.meta.env.DEV && !BASE_URL) {
 }
 
 export class ApiError extends Error {
-  constructor(message, status) {
+  constructor(message, status, data) {
     super(message)
     this.status = status
+    // The raw error body. Some endpoints return a machine-readable code in
+    // `error` alongside the prose — branch on `code`, never on `message`.
+    this.data = data ?? null
+    this.code = typeof data?.error === 'string' ? data.error : null
   }
 }
 
@@ -44,6 +48,9 @@ api.interceptors.request.use((config) => {
 function errorMessage(err) {
   const data = err.response?.data
   // Backend error shapes: { error: "..." } or { error: { message } } or { message }.
+  // When both are present, `error` is a machine-readable code (e.g.
+  // "social_handles_required") and `message` is the human prose — show the prose.
+  if (typeof data?.error === 'string' && typeof data?.message === 'string') return data.message
   if (typeof data?.error === 'string') return data.error
   if (typeof data?.error?.message === 'string') return data.error.message
   if (typeof data?.message === 'string') return data.message
@@ -55,5 +62,5 @@ function errorMessage(err) {
 // Unwrap to response.data on success; convert failures to ApiError otherwise.
 api.interceptors.response.use(
   (res) => res.data,
-  (err) => Promise.reject(new ApiError(errorMessage(err), err.response?.status)),
+  (err) => Promise.reject(new ApiError(errorMessage(err), err.response?.status, err.response?.data)),
 )

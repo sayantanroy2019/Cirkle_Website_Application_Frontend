@@ -5,7 +5,9 @@ import { api, ApiError } from '../lib/api.js'
 import { getLifestyleTags } from '../lib/reference.js'
 import { useProfileStore } from '../store/profileStore.js'
 import PhotoGrid from '../components/PhotoGrid.jsx'
+import SocialHandleFields from '../components/SocialHandleFields.jsx'
 import { keyFromPhotoUrl } from '../lib/uploads.js'
+import { SOCIAL_PLATFORMS, normalizeHandle } from '../lib/socialHandles.js'
 
 const MIN_NAME = 2
 const MIN_PHOTOS = 2
@@ -62,6 +64,9 @@ export function EditProfile() {
   // Reported by PhotoGrid: { uid, key, previewUrl, status, ... }
   const [photos, setPhotos] = useState([])
   const [selectedTagIds, setSelectedTagIds] = useState([])
+  // Optional social handles, keyed by platform. Empty string = not set / cleared.
+  const [socials, setSocials] = useState({ facebook: '', instagram: '', linkedin: '' })
+  const [socialErrors, setSocialErrors] = useState({})
 
   const [isSaving, setIsSaving] = useState(false)
   const [apiError, setApiError] = useState('')
@@ -81,6 +86,11 @@ export function EditProfile() {
     setLastName(profile.lastName ?? '')
     setBio(profile.bio ?? '')
     setSelectedTagIds(profile.lifestyleTags.map((t) => t.id))
+    setSocials({
+      facebook: profile.facebook ?? '',
+      instagram: profile.instagram ?? '',
+      linkedin: profile.linkedin ?? '',
+    })
     setSeeded(true)
   }, [profile, seeded])
 
@@ -132,10 +142,38 @@ export function EditProfile() {
   const photosValid = photosAllDone && photos.length >= MIN_PHOTOS && photos.length <= MAX_PHOTOS
   const anyUploading = photos.some((p) => p.status === 'uploading')
   const tagsValid = tagCount >= MIN_TAGS && tagCount <= MAX_TAGS
-  const canSave = nameValid && photosValid && tagsValid && !isSaving
+  // Handles are optional, but an unparseable one blocks saving rather than
+  // silently 400-ing on the server.
+  const socialsValid = SOCIAL_PLATFORMS.every((p) => !socialErrors[p])
+  const canSave = nameValid && photosValid && tagsValid && socialsValid && !isSaving
+
+  const setSocial = (platform, value) =>
+    setSocials((prev) => ({ ...prev, [platform]: value }))
+  const setSocialError = (platform, error) =>
+    setSocialErrors((prev) => ({ ...prev, [platform]: error }))
 
   const handleSave = async () => {
     if (!canSave) return
+
+    // Normalize once more — the user may hit Save without blurring the field
+    // they just typed into. '' clears the handle server-side.
+    const normalizedSocials = {}
+    const nextSocialErrors = {}
+    let socialHasError = false
+    for (const platform of SOCIAL_PLATFORMS) {
+      const { value, error } = normalizeHandle(platform, socials[platform])
+      if (error) {
+        nextSocialErrors[platform] = error
+        socialHasError = true
+      }
+      normalizedSocials[platform] = value
+    }
+    if (socialHasError) {
+      setSocialErrors(nextSocialErrors)
+      return
+    }
+    setSocials(normalizedSocials)
+
     setIsSaving(true)
     setApiError('')
     const payloadPhotos = photos.map((p, i) => ({ s3Key: p.key, position: i }))
@@ -146,6 +184,7 @@ export function EditProfile() {
         bio: bio.trim(),
         lifestyleTagIds: selectedTagIds,
         photos: payloadPhotos,
+        ...normalizedSocials,
       })
       // Update the shared profile in place (PATCH returns no body) so Profile
       // shows the new values instantly without a refetch. Photos keep their
@@ -158,6 +197,10 @@ export function EditProfile() {
           .map((id) => allTags.find((t) => t.id === id))
           .filter(Boolean),
         photos: photos.map((p, i) => ({ id: p.uid, url: p.previewUrl, position: i })),
+        // Mirror the server's null-for-empty so the gate check agrees.
+        facebook: normalizedSocials.facebook || null,
+        instagram: normalizedSocials.instagram || null,
+        linkedin: normalizedSocials.linkedin || null,
       })
       navigate('/profile')
     } catch (err) {
@@ -257,6 +300,23 @@ export function EditProfile() {
               className="input-dark mt-1.5 resize-none"
             />
             <p className="mt-1 text-right font-body text-[12px] text-cirkle-text-muted">{bio.length}/{BIO_MAX}</p>
+          </div>
+
+          {/* Social handles — optional here, but some events require them
+              before you can buy a ticket or request an invitation. */}
+          <div className="mt-6">
+            <p className="font-body text-label uppercase font-bold text-cirkle-text-muted">Socials</p>
+            <p className="mt-1.5 mb-3 font-body text-[12px] text-cirkle-text-muted">
+              Optional. Some events ask for these before you can join.
+            </p>
+            <SocialHandleFields
+              platforms={SOCIAL_PLATFORMS}
+              values={socials}
+              errors={socialErrors}
+              onChange={setSocial}
+              onErrorChange={setSocialError}
+              idPrefix="edit"
+            />
           </div>
 
           {/* My vibe (tags) */}

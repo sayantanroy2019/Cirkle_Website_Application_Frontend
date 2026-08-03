@@ -13,6 +13,8 @@ import {
   pollOrderUntilPaid,
   openRazorpayCheckout,
 } from '../lib/payment.js'
+import { socialGateMissing } from '../lib/socialHandles.js'
+import SocialHandlesDialog from '../components/SocialHandlesDialog.jsx'
 
 const rupees = (paise) => `₹${(paise / 100).toLocaleString('en-IN')}`
 
@@ -48,6 +50,9 @@ export function Checkout() {
   // idle | creating | awaiting | verifying | polling | pending
   const [phase, setPhase] = useState('idle')
   const [payError, setPayError] = useState('')
+  // Non-null when the purchase was blocked by the social-handle gate: the exact
+  // handles the server says are missing.
+  const [gateMissing, setGateMissing] = useState(null)
   const [cancelled, setCancelled] = useState(false)
   const [alreadyHasTicket, setAlreadyHasTicket] = useState(false)
 
@@ -116,6 +121,14 @@ export function Checkout() {
       order = await createOrder(eventId, couponCode || undefined)
     } catch (err) {
       setPhase('idle')
+      // The social-handle gate — open the dialog instead of surfacing an error.
+      // Keyed off the response code, so other 403s fall through to the generic
+      // handling below.
+      const missing = err instanceof ApiError ? socialGateMissing(err) : null
+      if (missing) {
+        setGateMissing(missing)
+        return
+      }
       const msg = err instanceof ApiError ? err.message : 'Could not start payment. Please try again.'
       if (err instanceof ApiError && err.status === 400 && /coupon/i.test(msg)) {
         removeCoupon()
@@ -314,6 +327,18 @@ export function Checkout() {
           </button>
         )}
       </div>
+
+      {gateMissing && (
+        <SocialHandlesDialog
+          missing={gateMissing}
+          // Cancel abandons the purchase — no order was created.
+          onCancel={() => setGateMissing(null)}
+          onSaved={async () => {
+            setGateMissing(null)
+            await handlePay() // the gate now passes; resumes the normal flow
+          }}
+        />
+      )}
     </div>
   )
 }
