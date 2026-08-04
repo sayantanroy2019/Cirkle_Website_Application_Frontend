@@ -8,22 +8,13 @@ import BottomNav from '../components/BottomNav.jsx'
 import ArtistAvatar from '../components/ArtistAvatar.jsx'
 import InstagramIcon from '../components/InstagramIcon.jsx'
 import SocialHandlesDialog from '../components/SocialHandlesDialog.jsx'
+import PersonAvatar from '../components/PersonAvatar.jsx'
+import AttendeeProfileSheet from '../components/AttendeeProfileSheet.jsx'
 import { socialGateMissing, PLATFORM_LABELS } from '../lib/socialHandles.js'
 
-// ─── MOCK DATA ────────────────────────────────────────────────────────────────
-// The backend does not provide attendees or groups yet. These are placeholders —
-// replace with real API data once those endpoints exist. (Lineup is real: it
-// comes from `event.artists` on GET /events/:id.)
-const MOCK_ATTENDEES = {
-  count: 24,
-  overflow: 19,
-  visible: [
-    { id: 1, name: 'Arjun', image: 'https://images.unsplash.com/photo-1610216705422-caa3fcb6d158?w=60&q=80' },
-    { id: 2, name: 'Ananya', image: 'https://images.unsplash.com/photo-1614786269829-d24616faf56d?w=60&q=80' },
-    { id: 3, name: 'Rohan', image: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=60&q=80' },
-    { id: 4, name: 'Ishita', image: 'https://images.unsplash.com/photo-1619436277100-90a4d96f8efc?w=60&q=80' },
-  ],
-}
+// Only the first few attendees are needed for the avatar row — "See All" opens
+// the paginated list. `total` from the response drives the count and +N badge.
+const PREVIEW_ATTENDEES = 4
 
 // Find Your Tribe / Browse Groups — deferred to Phase 2 (groups).
 /*
@@ -79,11 +70,24 @@ function EventDetailHeader({ onBack }) {
   )
 }
 
-// ─── Hero (gradient placeholder — backend has no image URL yet) ────────────────
-function EventHero() {
+// ─── Hero ─────────────────────────────────────────────────────────────────────
+// 16:9 to match the ratio the admin portal crops banners to. The gradient stays
+// underneath as the placeholder, so an event with no banner — or an expired
+// presigned URL (~1hr TTL) — degrades to it instead of a broken image.
+function EventHero({ bannerUrl, name }) {
+  const [bannerOk, setBannerOk] = useState(true)
+
   return (
     <div className="bg-cirkle-black px-4 pt-4 pb-2">
-      <div className="relative w-full rounded-[16px] overflow-hidden bg-gradient-to-br from-cirkle-chip to-cirkle-border-card" style={{ aspectRatio: '4/3' }}>
+      <div className="relative w-full rounded-[16px] overflow-hidden bg-gradient-to-br from-cirkle-chip to-cirkle-border-card" style={{ aspectRatio: '16/9' }}>
+        {bannerUrl && bannerOk && (
+          <img
+            src={bannerUrl}
+            alt={name}
+            onError={() => setBannerOk(false)}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        )}
         <div className="absolute bottom-3 right-3 flex items-center gap-2">
           <button type="button" className="w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white transition-all duration-200 hover:bg-black/70">
             <Share2 size={16} strokeWidth={2} />
@@ -287,6 +291,43 @@ function EventLineup({ artists }) {
   )
 }
 
+// ─── Gallery ──────────────────────────────────────────────────────────────────
+// Square tiles matching the ratio the admin portal crops gallery images to.
+// object-cover keeps them uniform even for images uploaded before that crop
+// step existed, which have arbitrary ratios.
+function GalleryTile({ url, index }) {
+  const [ok, setOk] = useState(true)
+  if (!ok) return null
+
+  return (
+    <div className="flex-shrink-0 w-[140px] aspect-square rounded-[12px] overflow-hidden border border-cirkle-border-card bg-gradient-to-br from-cirkle-chip to-cirkle-border-card">
+      <img
+        src={url}
+        alt={`Event photo ${index + 1}`}
+        loading="lazy"
+        onError={() => setOk(false)}
+        className="w-full h-full object-cover"
+      />
+    </div>
+  )
+}
+
+function EventGallery({ gallery }) {
+  const ordered = [...gallery].sort((a, b) => a.position - b.position)
+
+  return (
+    <section className="bg-cirkle-black px-4 pt-5 pb-4">
+      <h3 className="font-body text-[20px] font-bold text-white mb-4">Gallery</h3>
+      <div className="flex items-start gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4">
+        {ordered.map((photo, i) => (
+          <GalleryTile key={photo.url ?? i} url={photo.url} index={i} />
+        ))}
+      </div>
+      <hr className="border-cirkle-border mt-5" />
+    </section>
+  )
+}
+
 // ─── Venue ────────────────────────────────────────────────────────────────────
 function EventVenue({ name, address }) {
   const mapsQuery = encodeURIComponent([name, address].filter(Boolean).join(', '))
@@ -310,50 +351,76 @@ function EventVenue({ name, address }) {
   )
 }
 
-// ─── Who's Going (mock) ───────────────────────────────────────────────────────
-function EventWhosGoing({ attendees }) {
-  const visibleNames = attendees.visible.slice(0, 3)
+// ─── Who's Going ──────────────────────────────────────────────────────────────
+// Builds "Arjun, Ananya and 21 others" from however many names we actually have,
+// rather than assuming there are at least three.
+function attendeeSummary(people, total) {
+  const named = people.slice(0, 3).map((p) => (p.isYou ? 'You' : p.firstName))
+  if (named.length === 0) return null
+  const others = total - named.length
+  const list =
+    named.length === 1
+      ? named[0]
+      : `${named.slice(0, -1).join(', ')} and ${named[named.length - 1]}`
+  if (others <= 0) return `${list} ${named.length === 1 ? 'is' : 'are'} going`
+  return `${list} and ${others} other${others === 1 ? '' : 's'}`
+}
+
+function EventWhosGoing({ people, total, onSeeAll, onSelect }) {
+  const visible = people.slice(0, 4)
+  const overflow = total - visible.length
+  const summary = attendeeSummary(people, total)
 
   return (
     <section className="bg-cirkle-black px-4 pt-5 pb-4">
       <div className="flex items-center justify-between mb-1">
         <h3 className="font-body text-[20px] font-bold text-white">Who's Going</h3>
-        <button type="button" className="font-body text-[14px] font-semibold text-cirkle-yellow hover:text-cirkle-yellow-hover transition-colors duration-200">
-          See All
-        </button>
+        {total > 0 && (
+          <button
+            type="button"
+            onClick={onSeeAll}
+            className="font-body text-[14px] font-semibold text-cirkle-yellow hover:text-cirkle-yellow-hover transition-colors duration-200"
+          >
+            See All
+          </button>
+        )}
       </div>
 
       <p className="font-body text-[13px] font-normal text-cirkle-text-muted mb-3">
-        {attendees.count} attending
+        {total === 0 ? 'Nobody has booked yet' : `${total} attending`}
       </p>
 
-      <div className="flex items-center mb-2">
-        {attendees.visible.map((person, index) => (
-          <div
-            key={person.id}
-            className="w-11 h-11 rounded-full overflow-hidden border-2 border-cirkle-black flex-shrink-0"
-            style={{ marginLeft: index === 0 ? '0' : '-12px', zIndex: attendees.visible.length - index }}
-          >
-            <img src={person.image} alt={person.name} loading="lazy" className="w-full h-full object-cover" />
-          </div>
-        ))}
-        <div
-          className="w-11 h-11 rounded-full bg-cirkle-yellow border-2 border-cirkle-black flex items-center justify-center flex-shrink-0"
-          style={{ marginLeft: '-12px', zIndex: 0 }}
-        >
-          <span className="font-body text-[13px] font-bold text-cirkle-text-dark">+{attendees.overflow}</span>
+      {visible.length > 0 && (
+        <div className="flex items-center mb-2">
+          {visible.map((person, index) => (
+            <button
+              key={person.id}
+              type="button"
+              onClick={() => onSelect(person)}
+              className="rounded-full border-2 border-cirkle-black flex-shrink-0 transition-transform duration-200 hover:scale-105"
+              style={{ marginLeft: index === 0 ? '0' : '-12px', zIndex: visible.length - index }}
+              aria-label={`${person.firstName}'s profile`}
+            >
+              <PersonAvatar person={person} size={44} />
+            </button>
+          ))}
+          {overflow > 0 && (
+            <button
+              type="button"
+              onClick={onSeeAll}
+              className="w-11 h-11 rounded-full bg-cirkle-yellow border-2 border-cirkle-black flex items-center justify-center flex-shrink-0"
+              style={{ marginLeft: '-12px', zIndex: 0 }}
+              aria-label={`See all ${total} attendees`}
+            >
+              <span className="font-body text-[13px] font-bold text-cirkle-text-dark">+{overflow}</span>
+            </button>
+          )}
         </div>
-      </div>
+      )}
 
-      <p className="font-body text-[13px] font-normal text-cirkle-text-muted">
-        {visibleNames.map((p, i) => (
-          <span key={p.id}>
-            <span className="text-white font-medium">{p.name}</span>
-            {i < visibleNames.length - 1 ? ', ' : ''}
-          </span>
-        ))}
-        {' '}and {attendees.count - 3} others
-      </p>
+      {summary && (
+        <p className="font-body text-[13px] font-normal text-cirkle-text-muted">{summary}</p>
+      )}
 
       <hr className="border-cirkle-border mt-5" />
     </section>
@@ -427,6 +494,10 @@ export function EventDetail() {
   const [isRequestingInvite, setIsRequestingInvite] = useState(false)
   // Non-null when an action was blocked by the social-handle gate.
   const [gateMissing, setGateMissing] = useState(null)
+  // Who's Going preview — fetched separately from the event itself.
+  const [attendees, setAttendees] = useState([])
+  const [attendeeTotal, setAttendeeTotal] = useState(0)
+  const [selectedPerson, setSelectedPerson] = useState(null)
 
   const event = fetchedEvent ?? cachedEvent
 
@@ -448,6 +519,25 @@ export function EventDetail() {
       active = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
+
+  // Attendees are a separate call — a failure here must not blank the event, so
+  // it's swallowed and the section simply shows nobody.
+  useEffect(() => {
+    let active = true
+    api
+      .get(`/events/${id}/attendees`, { params: { limit: PREVIEW_ATTENDEES } })
+      .then((res) => {
+        if (!active) return
+        setAttendees(res.data)
+        setAttendeeTotal(res.total)
+      })
+      .catch(() => {
+        /* section renders empty */
+      })
+    return () => {
+      active = false
+    }
   }, [id])
 
   const isLoading = !event && !loadError
@@ -510,7 +600,7 @@ export function EventDetail() {
 
         {event && (
           <>
-            <EventHero />
+            <EventHero bannerUrl={event.bannerUrl} name={event.name} />
             <EventInfoBlock
               title={event.name}
               location={location}
@@ -529,12 +619,22 @@ export function EventDetail() {
             />
             {event.description && <EventAbout about={event.description} />}
             {event.artists?.length > 0 && <EventLineup artists={event.artists} />}
+            {event.gallery?.length > 0 && <EventGallery gallery={event.gallery} />}
             <EventVenue name={event.venueName} address={event.venueAddress} />
-            <EventWhosGoing attendees={MOCK_ATTENDEES} />
+            <EventWhosGoing
+              people={attendees}
+              total={attendeeTotal}
+              onSeeAll={() => navigate(`/events/${id}/attendees`)}
+              onSelect={setSelectedPerson}
+            />
             {/* <EventFindYourTribe groups={MOCK_GROUPS} /> — deferred to Phase 2 (groups) */}
           </>
         )}
       </main>
+
+      {selectedPerson && (
+        <AttendeeProfileSheet person={selectedPerson} onClose={() => setSelectedPerson(null)} />
+      )}
 
       {gateMissing && (
         <SocialHandlesDialog

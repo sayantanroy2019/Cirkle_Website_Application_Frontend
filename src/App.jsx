@@ -16,6 +16,7 @@ import MyTickets from './pages/MyTickets.jsx'
 import Profile from './pages/Profile.jsx'
 import CitySwitcher from './pages/CitySwitcher.jsx'
 import EventDetail from './pages/EventDetail.jsx'
+import EventAttendees from './pages/EventAttendees.jsx'
 import EditProfile from './pages/EditProfile.jsx'
 import Checkout from './pages/Checkout.jsx'
 import PaymentSuccess from './pages/PaymentSuccess.jsx'
@@ -47,6 +48,7 @@ function App() {
       </Route>
       <Route path="/city" element={<CitySwitcher />} />
       <Route path="/events/:id" element={<EventDetail />} />
+      <Route path="/events/:id/attendees" element={<EventAttendees />} />
       <Route path="/profile/edit" element={<EditProfile />} />
       <Route path="/checkout/:eventId" element={<Checkout />} />
       <Route path="/payment/success" element={<PaymentSuccess />} />
