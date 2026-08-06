@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Ticket, Loader2 } from 'lucide-react'
 import { api, ApiError } from '../lib/api.js'
 import { useEventsStore, selectEventById } from '../store/eventsStore.js'
@@ -34,6 +34,13 @@ function Row({ label, value, muted, accent }) {
 export function Checkout() {
   const { eventId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // The ticket category chosen on the event detail page. Order creation does
+  // not accept a category yet (Part 4) — this is carried and displayed so the
+  // buyer sees what they picked. When the API takes it, send `ticketCategory.id`
+  // (also available as location.state.ticketCategoryId) to createOrder.
+  const ticketCategory = location.state?.ticketCategory ?? null
 
   const cachedEvent = useEventsStore(selectEventById(eventId))
   const [event, setEvent] = useState(cachedEvent)
@@ -205,13 +212,23 @@ export function Checkout() {
           </div>
         )}
 
-        {/* Fixed single-ticket indicator (§13 — never a quantity selector) */}
+        {/* Fixed single-ticket indicator (§13 — never a quantity selector).
+            With a category chosen, "1 ticket" still holds — admitsCount is how
+            many people that one ticket lets in, not how many tickets are bought. */}
         <div className="mt-4 flex items-center gap-3 rounded-[12px] bg-cirkle-input border border-cirkle-border-card px-4 py-3">
           <Ticket size={18} className="text-cirkle-yellow shrink-0" strokeWidth={2} />
           <div>
-            <p className="font-body text-[14px] font-semibold text-white">Tickets: 1 — just for you</p>
+            <p className="font-body text-[14px] font-semibold text-white">
+              {ticketCategory
+                ? `${ticketCategory.categoryName} — 1 ticket`
+                : 'Tickets: 1 — just for you'}
+            </p>
             <p className="font-body text-[12px] text-cirkle-text-muted">
-              Every Cirkle booking is one ticket for yourself. You can look for a group after you pay.
+              {ticketCategory
+                ? ticketCategory.admitsCount === 1
+                  ? 'One ticket, one QR code. Admits 1 person.'
+                  : `One ticket, one QR code. Admits ${ticketCategory.admitsCount} people — bring them with you.`
+                : 'Every Cirkle booking is one ticket for yourself. You can look for a group after you pay.'}
             </p>
           </div>
         </div>

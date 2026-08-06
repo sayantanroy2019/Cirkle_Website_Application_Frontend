@@ -10,6 +10,7 @@ import InstagramIcon from '../components/InstagramIcon.jsx'
 import SocialHandlesDialog from '../components/SocialHandlesDialog.jsx'
 import PersonAvatar from '../components/PersonAvatar.jsx'
 import AttendeeProfileSheet from '../components/AttendeeProfileSheet.jsx'
+import TicketCategorySelector from '../components/TicketCategorySelector.jsx'
 import { socialGateMissing, PLATFORM_LABELS } from '../lib/socialHandles.js'
 
 // Only the first few attendees are needed for the avatar row — "See All" opens
@@ -179,12 +180,21 @@ function EventInfoBlock({
   eventType,
   invitationStatus,
   isRequestingInvite,
+  ticketCategories,
+  soldOut,
+  selectedCategory,
+  onSelectCategory,
   onPay,
   onViewTicket,
   onRequestInvite,
 }) {
   const showInviteNote = eventType === 'invite_only' && !userHasTicket
   const organizerIgUrl = instagramUrl(organizerInstagram)
+
+  // Category selection only applies once the user can actually buy: they don't
+  // already hold a ticket, and an invite-only event has an accepted invitation.
+  const inviteCleared = eventType !== 'invite_only' || invitationStatus === 'accepted'
+  const canChooseCategory = !userHasTicket && inviteCleared
 
   return (
     <div className="bg-cirkle-black px-4 pt-3 pb-4">
@@ -215,18 +225,59 @@ function EventInfoBlock({
 
       <hr className="border-cirkle-border mb-4 mt-2" />
 
-      <div className="flex items-center justify-between bg-cirkle-card border border-cirkle-border-card rounded-[14px] px-4 py-3">
-        <span className="font-body text-[18px] font-semibold text-white">{price}</span>
-        <EventCta
-          userHasTicket={userHasTicket}
-          eventType={eventType}
-          invitationStatus={invitationStatus}
-          isRequestingInvite={isRequestingInvite}
-          onPay={onPay}
-          onViewTicket={onViewTicket}
-          onRequestInvite={onRequestInvite}
-        />
-      </div>
+      {/* The gates come first. Until the user holds a ticket AND has cleared
+          the invite gate, the old single-price row stands — picking a category
+          is only meaningful once they're actually allowed to buy. */}
+      {!canChooseCategory ? (
+        <div className="flex items-center justify-between bg-cirkle-card border border-cirkle-border-card rounded-[14px] px-4 py-3">
+          <span className="font-body text-[18px] font-semibold text-white">{price}</span>
+          <EventCta
+            userHasTicket={userHasTicket}
+            eventType={eventType}
+            invitationStatus={invitationStatus}
+            isRequestingInvite={isRequestingInvite}
+            onPay={onPay}
+            onViewTicket={onViewTicket}
+            onRequestInvite={onRequestInvite}
+          />
+        </div>
+      ) : ticketCategories.length === 0 ? (
+        // Unconfigured, not sold out — keyed off the empty array, per the API contract.
+        <div className="bg-cirkle-card border border-cirkle-border-card rounded-[14px] px-4 py-4 text-center">
+          <p className="font-body text-[15px] font-semibold text-white">Tickets not yet available</p>
+          <p className="mt-1 font-body text-[13px] text-cirkle-text-muted">
+            Check back soon — the organizer hasn't opened sales for this event.
+          </p>
+        </div>
+      ) : (
+        <>
+          {soldOut && (
+            <div className="mb-3 bg-cirkle-card border border-cirkle-border-card rounded-[14px] px-4 py-3 text-center">
+              <p className="font-body text-[15px] font-bold uppercase tracking-wide text-white">Sold out</p>
+              <p className="mt-1 font-body text-[13px] text-cirkle-text-muted">
+                Every ticket type for this event has gone.
+              </p>
+            </div>
+          )}
+
+          <TicketCategorySelector
+            categories={ticketCategories}
+            selectedId={selectedCategory?.id ?? null}
+            onSelect={onSelectCategory}
+          />
+
+          <button
+            type="button"
+            onClick={onPay}
+            disabled={!selectedCategory}
+            className="btn-primary w-full px-6 py-3.5 mt-4 text-[15px] font-bold tracking-wide uppercase disabled:opacity-40 disabled:pointer-events-none"
+          >
+            {selectedCategory
+              ? `Buy ${selectedCategory.categoryName} · ${formatPrice(selectedCategory.pricePaise)}`
+              : 'Select a ticket'}
+          </button>
+        </>
+      )}
 
       {showInviteNote && (
         <p className="mt-2 font-body text-[13px] text-cirkle-text-muted">
@@ -498,6 +549,9 @@ export function EventDetail() {
   const [attendees, setAttendees] = useState([])
   const [attendeeTotal, setAttendeeTotal] = useState(0)
   const [selectedPerson, setSelectedPerson] = useState(null)
+  // The chosen ticket category, carried into checkout. Never auto-selected —
+  // picking how many people a ticket admits has to be a deliberate choice.
+  const [selectedCategory, setSelectedCategory] = useState(null)
 
   const event = fetchedEvent ?? cachedEvent
 
@@ -613,7 +667,19 @@ export function EventDetail() {
               eventType={event.eventType}
               invitationStatus={event.invitationStatus}
               isRequestingInvite={isRequestingInvite}
-              onPay={() => navigate(`/checkout/${event.id}`)}
+              ticketCategories={event.ticketCategories ?? []}
+              soldOut={event.soldOut}
+              selectedCategory={selectedCategory}
+              onSelectCategory={setSelectedCategory}
+              onPay={() =>
+                navigate(`/checkout/${event.id}`, {
+                  // The whole category travels, not just the id: checkout shows
+                  // the name, and Part 4 sends the id to order creation.
+                  state: selectedCategory
+                    ? { ticketCategoryId: selectedCategory.id, ticketCategory: selectedCategory }
+                    : undefined,
+                })
+              }
               onViewTicket={() => navigate('/tickets')}
               onRequestInvite={handleRequestInvite}
             />
