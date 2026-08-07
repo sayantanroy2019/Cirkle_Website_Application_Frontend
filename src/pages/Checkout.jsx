@@ -15,6 +15,7 @@ import {
 } from '../lib/payment.js'
 import { socialGateMissing } from '../lib/socialHandles.js'
 import SocialHandlesDialog from '../components/SocialHandlesDialog.jsx'
+import HoldCountdown from '../components/HoldCountdown.jsx'
 
 const rupees = (paise) => `₹${(paise / 100).toLocaleString('en-IN')}`
 
@@ -62,14 +63,25 @@ export function Checkout() {
   const [gateMissing, setGateMissing] = useState(null)
   const [cancelled, setCancelled] = useState(false)
   const [alreadyHasTicket, setAlreadyHasTicket] = useState(false)
+  // The chosen category sold out (or was withdrawn) between picking and paying.
+  const [categoryUnavailable, setCategoryUnavailable] = useState('')
+  // A live hold on a DIFFERENT category than the one just chosen. The server
+  // allows one hold per event, so we stop here and explain rather than opening
+  // Razorpay for the wrong ticket.
+  const [conflictingHold, setConflictingHold] = useState(null)
+  const [holdExpired, setHoldExpired] = useState(false)
+  // The live hold behind the current attempt — drives the countdown shown after
+  // a dismissed payment, so the user knows their ticket is still reserved.
+  const [activeHold, setActiveHold] = useState(null)
 
   useEffect(() => {
     fetchProfile()
   }, [fetchProfile])
 
-  // If we didn't arrive with the event cached, try to fetch it (may 404 today).
+  // Fetch the detail even when the list copy is cached: only the detail carries
+  // ticketCategories, which is what names a held category back to the user.
   useEffect(() => {
-    if (event || !eventId) return
+    if (event?.ticketCategories || !eventId) return
     let active = true
     api
       .get(`/events/${eventId}`)
@@ -84,7 +96,17 @@ export function Checkout() {
     }
   }, [event, eventId])
 
-  const breakdown = couponBreakdown ?? (event ? estimateBreakdown(event.price) : null)
+  // Name the held category back to the user. The order carries only its id, so
+  // this needs the detail response's ticketCategories.
+  const heldCategory =
+    conflictingHold && event?.ticketCategories
+      ? event.ticketCategories.find((c) => c.id === conflictingHold.eventTicketCategoryId)
+      : null
+
+  // The server charges the category's price, so estimate from that. Falls back
+  // to the event price only when no category came through (see the guard below).
+  const basePricePaise = ticketCategory?.pricePaise ?? event?.price
+  const breakdown = couponBreakdown ?? (basePricePaise != null ? estimateBreakdown(basePricePaise) : null)
   const isBusy = phase !== 'idle' && phase !== 'pending'
 
   const handleApplyCoupon = async () => {
@@ -125,7 +147,7 @@ export function Checkout() {
 
     let order
     try {
-      order = await createOrder(eventId, couponCode || undefined)
+      order = await createOrder(eventId, ticketCategory?.id, couponCode || undefined)
     } catch (err) {
       setPhase('idle')
       // The social-handle gate — open the dialog instead of surfacing an error.
@@ -137,7 +159,14 @@ export function Checkout() {
         return
       }
       const msg = err instanceof ApiError ? err.message : 'Could not start payment. Please try again.'
-      if (err instanceof ApiError && err.status === 400 && /coupon/i.test(msg)) {
+      const code = err instanceof ApiError ? err.code : null
+
+      // Category-level 409s must be matched on the code, not the prose: "This
+      // ticket category is sold out" contains "ticket" and would otherwise fall
+      // into the already-has-a-ticket branch below and offer My Tickets.
+      if (code === 'category_sold_out' || code === 'not_available_for_sale') {
+        setCategoryUnavailable(msg)
+      } else if (err instanceof ApiError && err.status === 400 && /coupon/i.test(msg)) {
         removeCoupon()
         setCouponError(msg)
       } else if (err instanceof ApiError && err.status === 409 && /ticket/i.test(msg)) {
@@ -148,6 +177,29 @@ export function Checkout() {
       }
       return
     }
+
+    // One hold per event: asking for a different category while one is live
+    // silently returns the held one. Paying now would buy the wrong ticket at
+    // the wrong price, so stop and explain instead of opening Razorpay.
+    if (
+      order.resumed &&
+      order.eventTicketCategoryId &&
+      ticketCategory?.id &&
+      order.eventTicketCategoryId !== ticketCategory.id
+    ) {
+      setPhase('idle')
+      setConflictingHold(order)
+      setHoldExpired(false)
+      return
+    }
+
+    await payForOrder(order)
+  }
+
+  // Everything after an order exists: open Razorpay, then confirm. Shared so
+  // "pay for the ticket you're already holding" reuses the same path.
+  const payForOrder = async (order) => {
+    setActiveHold(order)
 
     const prefill = {
       name: profile ? `${profile.firstName} ${profile.lastName}`.trim() : undefined,
@@ -185,6 +237,39 @@ export function Checkout() {
         setPhase('pending')
       }
     }
+  }
+
+  // The category lives in router state, which does not survive a refresh or a
+  // pasted link. Order creation requires it, so send them back to pick rather
+  // than letting the Pay button fail with a 400.
+  if (!ticketCategory) {
+    return (
+      <div className="min-h-screen flex flex-col px-6 py-6">
+        <div className="max-w-[440px] w-full mx-auto flex-1 flex flex-col">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="w-9 h-9 flex items-center justify-center rounded-full text-white transition-all duration-200 hover:bg-white/10 -ml-1.5"
+            aria-label="Back"
+          >
+            <ArrowLeft size={22} strokeWidth={2} />
+          </button>
+          <div className="flex-1 flex flex-col justify-center">
+            <h1 className="font-display text-section-md text-white uppercase">Choose a ticket first</h1>
+            <p className="mt-3 font-body text-[14px] text-cirkle-text-muted">
+              Pick which ticket you’re buying, then come back to pay.
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate(`/events/${eventId}/tickets`, { replace: true })}
+              className="btn-primary w-full px-8 py-3.5 mt-6"
+            >
+              Choose your ticket
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -311,6 +396,97 @@ export function Checkout() {
           >
             View my tickets →
           </button>
+        )}
+        {conflictingHold && (
+          <div className="mt-4 rounded-[14px] bg-cirkle-card border border-cirkle-yellow/50 px-4 py-4">
+            <p className="font-body text-[15px] font-bold text-white">
+              You’re already holding a {heldCategory?.categoryName ?? 'ticket'}
+            </p>
+            <p className="mt-1.5 font-body text-[13px] text-cirkle-text-muted leading-relaxed">
+              {holdExpired ? (
+                <>
+                  That hold has expired, so nothing is reserved for you now. You can go back and
+                  pick {ticketCategory.categoryName} — or any other ticket.
+                </>
+              ) : (
+                <>
+                  You started buying{' '}
+                  {heldCategory ? `a ${heldCategory.categoryName}` : 'a ticket'} for this event and
+                  didn’t finish, so it’s reserved for you. Only one ticket can be held at a time,
+                  so {ticketCategory.categoryName} can’t be started until this one is paid for or
+                  the hold runs out.
+                </>
+              )}
+            </p>
+
+            {!holdExpired && (
+              <div className="mt-3 flex items-center justify-between rounded-[10px] bg-cirkle-input px-3 py-2.5">
+                <span className="font-body text-[13px] text-cirkle-text-muted">
+                  Hold expires in
+                </span>
+                <HoldCountdown
+                  key={conflictingHold.expiresAt}
+                  expiresAt={conflictingHold.expiresAt}
+                  onExpire={() => setHoldExpired(true)}
+                  className="font-body text-[16px] font-bold tabular-nums text-cirkle-yellow"
+                />
+              </div>
+            )}
+
+            <div className="mt-3 flex flex-col gap-2">
+              {!holdExpired && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const held = conflictingHold
+                    setConflictingHold(null)
+                    payForOrder(held)
+                  }}
+                  className="btn-primary w-full px-6 py-3"
+                >
+                  Pay for {heldCategory?.categoryName ?? 'held ticket'} · {rupees(conflictingHold.amount)}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => navigate(`/events/${eventId}/tickets`, { replace: true })}
+                disabled={!holdExpired}
+                className="btn-secondary w-full px-6 py-3 disabled:opacity-40 disabled:pointer-events-none"
+              >
+                {holdExpired
+                  ? 'Choose a different ticket'
+                  : `Switch ticket once the hold ends`}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* The hold survives a dismissed payment — say so, with the clock. */}
+        {cancelled && activeHold && !conflictingHold && !holdExpired && (
+          <div className="mt-3 flex items-center justify-between rounded-[10px] bg-cirkle-input border border-cirkle-border-card px-3 py-2.5">
+            <span className="font-body text-[13px] text-cirkle-text-muted">
+              Your ticket is still held for
+            </span>
+            <HoldCountdown
+              key={activeHold.expiresAt}
+              expiresAt={activeHold.expiresAt}
+              onExpire={() => setHoldExpired(true)}
+              className="font-body text-[16px] font-bold tabular-nums text-cirkle-yellow"
+            />
+          </div>
+        )}
+
+        {categoryUnavailable && (
+          <div className="mt-4 rounded-[12px] bg-cirkle-input border border-cirkle-border-card px-4 py-3">
+            <p className="font-body text-[13px] text-red-400">{categoryUnavailable}</p>
+            <button
+              type="button"
+              onClick={() => navigate(`/events/${eventId}/tickets`, { replace: true })}
+              className="mt-2 font-body text-[13px] font-semibold text-cirkle-yellow hover:text-cirkle-yellow-hover transition-all duration-200"
+            >
+              Choose a different ticket →
+            </button>
+          </div>
         )}
 
         {phase === 'pending' ? (

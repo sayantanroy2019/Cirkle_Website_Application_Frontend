@@ -23,8 +23,11 @@ export function validateCoupon(code, eventId) {
 }
 
 // Claim a hold + create (or resume) a Razorpay order. Returns OrderCreated.
-export function createOrder(eventId, couponCode) {
-  const body = couponCode ? { eventId, couponCode } : { eventId }
+// `eventTicketCategoryId` is required by the API — the price charged and the
+// capacity consumed both come from the chosen category.
+export function createOrder(eventId, eventTicketCategoryId, couponCode) {
+  const body = { eventId, eventTicketCategoryId }
+  if (couponCode) body.couponCode = couponCode
   return api.post('/payments/orders', body)
 }
 
