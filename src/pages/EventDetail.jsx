@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Upload, Bookmark, Share2, MoreHorizontal, MapPin, CalendarDays } from 'lucide-react'
+// Upload, Bookmark, Share2, MoreHorizontal are commented out along with the
+// share/save/more buttons below — add them back here when those are implemented.
+import { ArrowLeft, MapPin, CalendarDays } from 'lucide-react'
 import { api, ApiError } from '../lib/api.js'
 import { useEventsStore, selectEventById } from '../store/eventsStore.js'
 import { formatPrice, formatEventDay, formatEventTime, instagramUrl } from '../lib/format.js'
@@ -58,6 +60,8 @@ function EventDetailHeader({ onBack }) {
         Event Details
       </h1>
 
+      {/* Share / save — hidden until they do something. Restore with the
+          Upload and Bookmark imports at the top of this file.
       <div className="flex items-center gap-3">
         <button type="button" className="w-9 h-9 flex items-center justify-center text-white transition-opacity duration-200 hover:opacity-70">
           <Upload size={20} strokeWidth={2} />
@@ -66,6 +70,7 @@ function EventDetailHeader({ onBack }) {
           <Bookmark size={20} strokeWidth={2} />
         </button>
       </div>
+      */}
     </header>
   )
 }
@@ -88,6 +93,8 @@ function EventHero({ bannerUrl, name }) {
             className="absolute inset-0 w-full h-full object-cover"
           />
         )}
+        {/* Share / save / more — hidden until they do something. Restore with
+            the Share2, Bookmark and MoreHorizontal imports at the top.
         <div className="absolute bottom-3 right-3 flex items-center gap-2">
           <button type="button" className="w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white transition-all duration-200 hover:bg-black/70">
             <Share2 size={16} strokeWidth={2} />
@@ -99,6 +106,7 @@ function EventHero({ bannerUrl, name }) {
             <MoreHorizontal size={16} strokeWidth={2} />
           </button>
         </div>
+        */}
       </div>
     </div>
   )
