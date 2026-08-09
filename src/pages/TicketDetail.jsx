@@ -42,14 +42,20 @@ export function TicketDetail() {
         if (!active) return
         setTicket(data.ticket)
         try {
-          const url = await QRCode.toDataURL(data.ticket.bookingRef, {
+          // qrPayload is the server's own string — encoded verbatim. The client
+          // never builds, wraps or parses it, so the door scanner sees exactly
+          // what the backend minted. No extra request: it arrives with the
+          // ticket, so the code still draws with no connectivity.
+          const url = await QRCode.toDataURL(data.ticket.qrPayload, {
             width: 240,
             margin: 1,
             color: { dark: '#060606', light: '#FFFFFF' },
           })
           if (active) setQrDataUrl(url)
         } catch {
-          /* QR failed to render — the printed ref below still works */
+          /* QR failed to render — the printed bookingRef below still works.
+             Deliberately not the qrPayload: a JSON blob is useless to staff,
+             the CRKL- ref is what they key in. */
         }
       })
       .catch((err) => {
