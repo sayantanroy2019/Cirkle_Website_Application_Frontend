@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
 import Landing from './pages/onboarding/Landing.jsx'
 import PhoneEntry from './pages/onboarding/PhoneEntry.jsx'
+import OtpVerification from './pages/onboarding/OtpVerification.jsx'
 import NameStep from './pages/onboarding/steps/NameStep.jsx'
 import DobStep from './pages/onboarding/steps/DobStep.jsx'
 import GenderStep from './pages/onboarding/steps/GenderStep.jsx'
@@ -31,6 +32,7 @@ function App() {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/phone" element={<PhoneEntry />} />
+      <Route path="/otp" element={<OtpVerification />} />
       <Route path="/onboarding">
         <Route path="name" element={<NameStep />} />
         <Route path="dob" element={<DobStep />} />

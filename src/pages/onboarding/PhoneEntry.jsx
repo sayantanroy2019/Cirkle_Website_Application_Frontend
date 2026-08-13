@@ -2,20 +2,18 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Phone } from 'lucide-react'
 import { api, ApiError } from '../../lib/api.js'
-import { useAuthStore } from '../../store/authStore.js'
-import { resetUserStores } from '../../store/session.js'
-import { routeForOnboardingStep } from './onboardingRoutes.js'
+import { mapOtpError } from '../../lib/otpErrors.js'
 
 const PHONE_REGEX = /^[6-9]\d{9}$/
 
 export function PhoneEntry() {
   const navigate = useNavigate()
-  const setToken = useAuthStore((s) => s.setToken)
-  const resetWalkthrough = useAuthStore((s) => s.resetWalkthrough)
   const [phone, setPhone] = useState('')
   const [touched, setTouched] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [apiError, setApiError] = useState('')
+  // Set by a rate_limit — sending again is the very thing to stop them doing.
+  const [sendBlocked, setSendBlocked] = useState(false)
 
   const isValid = PHONE_REGEX.test(phone)
   const showError = touched && phone.length > 0 && !isValid
@@ -24,24 +22,27 @@ export function PhoneEntry() {
     const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 10)
     setPhone(digitsOnly)
     setApiError('')
+    setSendBlocked(false) // a different number is a different rate-limit bucket
   }
 
+  // Sends the code only. No token is issued here — that happens at verify,
+  // which is the one place a JWT is minted.
   const handleSubmit = async (e) => {
     e.preventDefault()
     setTouched(true)
-    if (!isValid || isSubmitting) return
+    if (!isValid || isSubmitting || sendBlocked) return
 
     setIsSubmitting(true)
     setApiError('')
     try {
-      const data = await api.post('/auth/login', { phone: `+91${phone}` }, { auth: false })
-      resetUserStores() // clear any previous user's cached data
-      resetWalkthrough() // a fresh onboarding should see the walkthrough again
-      setToken(data.token)
-      navigate(routeForOnboardingStep(data))
+      await api.post('/auth/otp/send', { phone: `+91${phone}` }, { auth: false })
+      // isSubmitting stays true through the navigation, so a second tap during
+      // the transition can't fire another send.
+      navigate('/otp', { state: { phone } })
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Something went wrong. Please try again.'
-      setApiError(message)
+      const mapped = err instanceof ApiError ? mapOtpError(err) : null
+      setApiError(mapped?.message ?? 'Something went wrong. Please try again.')
+      if (mapped?.blocksSend) setSendBlocked(true)
       setIsSubmitting(false)
     }
   }
@@ -69,7 +70,7 @@ export function PhoneEntry() {
           What's your phone number?
         </h1>
         <p className="opacity-0 animate-[fadeUp_0.5s_ease_forwards] [animation-delay:0.2s] mt-3 font-body text-[15px] text-cirkle-text-muted">
-          We'll use this number to find or create your account.
+          We'll send you a 6-digit code to sign in.
         </p>
 
         <div className="opacity-0 animate-[fadeUp_0.5s_ease_forwards] [animation-delay:0.3s] mt-8">
@@ -107,10 +108,10 @@ export function PhoneEntry() {
 
         <button
           type="submit"
-          disabled={!isValid || isSubmitting}
+          disabled={!isValid || isSubmitting || sendBlocked}
           className="opacity-0 animate-[fadeUp_0.5s_ease_forwards] [animation-delay:0.4s] btn-primary w-full px-8 py-3.5 mt-8 disabled:opacity-40 disabled:pointer-events-none"
         >
-          {isSubmitting ? 'Logging in…' : 'Continue'}
+          {isSubmitting ? 'Sending code…' : 'Send code'}
         </button>
       </form>
     </div>
