@@ -4,8 +4,6 @@ import { ArrowLeft, CalendarDays, MapPin, CheckCircle2 } from 'lucide-react'
 import QRCode from 'qrcode'
 import { api, ApiError } from '../lib/api.js'
 import { formatEventDateTime } from '../lib/format.js'
-import { useAuthStore } from '../store/authStore.js'
-import { rememberRedirect } from '../lib/redirect.js'
 import { readCachedTicket, writeCachedTicket } from '../lib/ticketCache.js'
 
 const rupees = (paise) => `₹${(paise / 100).toLocaleString('en-IN')}`
@@ -29,7 +27,6 @@ function Fact({ label, value }) {
 export function TicketDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const clearToken = useAuthStore((s) => s.clearToken)
 
   // Paint the last-seen copy immediately: this screen gets opened in basements
   // and queues, where a spinner is worse than slightly stale data.
@@ -62,11 +59,9 @@ export function TicketDetail() {
           // of the responses being identical.
           setNotFound(true)
         } else if (status === 401) {
-          // Token expired. Store this path so signing in again lands back here.
-          rememberRedirect(`/tickets/${id}`)
-          clearToken()
-          navigate('/phone', { replace: true })
-          return
+          // Handled centrally in lib/api.js: it remembers the live location and
+          // clears the token, which re-renders RequireAuth into a redirect.
+          // Nothing to do here but stop.
         } else {
           // Server error or offline. If a cached copy is on screen, leave it —
           // a stale ticket beats stranding someone at a venue on a dead screen.
@@ -84,7 +79,7 @@ export function TicketDetail() {
     return () => {
       active = false
     }
-  }, [id, reloadKey, navigate, clearToken])
+  }, [id, reloadKey])
 
   // Drawn from whatever payload we have — network or cache — so the code is
   // present offline. THE RULE: qrPayload goes to the renderer exactly as
