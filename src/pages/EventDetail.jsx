@@ -253,7 +253,16 @@ function EventInfoBlock({
 
       <div className="flex items-center justify-between bg-cirkle-card border border-cirkle-border-card rounded-[14px] px-4 py-3">
         <span className="font-body text-[18px] font-semibold text-white">{price}</span>
+        {/* The key is load-bearing, not decoration.
+            Without it React reuses one <button> and swaps its text and opacity
+            in place. Because .btn-primary carries `transition-all`, iOS Safari
+            was compositing the new label over the old frame — "Send invitation"
+            and "Invitation sent" visibly stacked, at the pre-change brightness,
+            until a navigation forced a repaint.
+            Changing the key remounts the component, so each CTA state gets a
+            fresh element and there is no in-place mutation to leave a ghost. */}
         <EventCta
+          key={`${userHasTicket}|${invitationStatus ?? 'none'}|${soldOut}|${ticketCategories.length > 0}`}
           userHasTicket={userHasTicket}
           eventType={eventType}
           invitationStatus={invitationStatus}
