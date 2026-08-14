@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Outlet } from 'react-router-dom'
 import Landing from './pages/onboarding/Landing.jsx'
 import PhoneEntry from './pages/onboarding/PhoneEntry.jsx'
 import OtpVerification from './pages/onboarding/OtpVerification.jsx'
@@ -11,6 +11,7 @@ import PhotosStep from './pages/onboarding/steps/PhotosStep.jsx'
 import EmailStep from './pages/onboarding/steps/EmailStep.jsx'
 import Walkthrough from './pages/onboarding/Walkthrough.jsx'
 import AppShell from './components/AppShell.jsx'
+import RequireAuth from './components/RequireAuth.jsx'
 import Feed from './pages/Feed.jsx'
 import MyGroups from './pages/MyGroups.jsx'
 import MyTickets from './pages/MyTickets.jsx'
@@ -33,7 +34,9 @@ function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/phone" element={<PhoneEntry />} />
       <Route path="/otp" element={<OtpVerification />} />
-      <Route path="/onboarding">
+      {/* Authenticated, but capture={false}: the resume point comes from the
+          verify response, so a remembered onboarding URL would only mislead. */}
+      <Route path="/onboarding" element={<RequireAuth capture={false}><Outlet /></RequireAuth>}>
         <Route path="name" element={<NameStep />} />
         <Route path="dob" element={<DobStep />} />
         <Route path="gender" element={<GenderStep />} />
@@ -42,21 +45,46 @@ function App() {
         <Route path="photos" element={<PhotosStep />} />
         <Route path="email" element={<EmailStep />} />
       </Route>
-      <Route path="/walkthrough" element={<Walkthrough />} />
-      <Route element={<AppShell />}>
+      <Route
+        path="/walkthrough"
+        element={
+          <RequireAuth capture={false}>
+            <Walkthrough />
+          </RequireAuth>
+        }
+      />
+      {/* Everything below needs a session. Guarding at the route means these
+          screens never mount tokenless and fire a request that is certain to
+          401 — which showed as a flash of empty state before the redirect. */}
+      <Route
+        element={
+          <RequireAuth>
+            <AppShell />
+          </RequireAuth>
+        }
+      >
         <Route path="/feed" element={<Feed />} />
         <Route path="/groups" element={<MyGroups />} />
         <Route path="/tickets" element={<MyTickets />} />
         <Route path="/profile" element={<Profile />} />
       </Route>
-      <Route path="/city" element={<CitySwitcher />} />
-      <Route path="/events/:id" element={<EventDetail />} />
-      <Route path="/events/:id/attendees" element={<EventAttendees />} />
-      <Route path="/events/:id/tickets" element={<EventTickets />} />
-      <Route path="/profile/edit" element={<EditProfile />} />
-      <Route path="/checkout/:eventId" element={<Checkout />} />
-      <Route path="/payment/success" element={<PaymentSuccess />} />
-      <Route path="/tickets/:id" element={<TicketDetail />} />
+      <Route path="/city" element={<RequireAuth><CitySwitcher /></RequireAuth>} />
+      <Route path="/events/:id" element={<RequireAuth><EventDetail /></RequireAuth>} />
+      <Route path="/events/:id/attendees" element={<RequireAuth><EventAttendees /></RequireAuth>} />
+      <Route path="/events/:id/tickets" element={<RequireAuth><EventTickets /></RequireAuth>} />
+      <Route path="/profile/edit" element={<RequireAuth><EditProfile /></RequireAuth>} />
+      <Route path="/checkout/:eventId" element={<RequireAuth><Checkout /></RequireAuth>} />
+      <Route path="/payment/success" element={<RequireAuth><PaymentSuccess /></RequireAuth>} />
+      {/* Deep-link target from the WhatsApp ticket message. Guarded so a tap
+          while logged out captures this path, runs OTP, and comes back here. */}
+      <Route
+        path="/tickets/:id"
+        element={
+          <RequireAuth>
+            <TicketDetail />
+          </RequireAuth>
+        }
+      />
       <Route path="/legal/privacy" element={<PrivacyPolicy />} />
       <Route path="/legal/terms" element={<TermsOfUse />} />
       <Route path="/legal/safety" element={<SafetyGuidelines />} />

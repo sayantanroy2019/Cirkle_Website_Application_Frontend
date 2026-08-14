@@ -4,6 +4,7 @@ import { useSpring, animated } from '@react-spring/web'
 import { useDrag } from '@use-gesture/react'
 import { Music2, CalendarDays, MapPin, Ticket, ArrowRight, ChevronLeft } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
+import { consumeRedirect } from '../../lib/redirect.js'
 
 // Drop a licensed portrait (Unsplash/Pexels — free for commercial use) at
 // public/walkthrough/aisha.jpg. If it's missing, cards fall back to the
@@ -176,7 +177,7 @@ export function Walkthrough() {
   // Guard: if already dismissed (e.g. manual nav or refresh after finishing),
   // don't show it again — go straight to the Feed.
   useEffect(() => {
-    if (walkthroughSeen) navigate('/feed', { replace: true })
+    if (walkthroughSeen) navigate(consumeRedirect() ?? '/feed', { replace: true })
   }, [walkthroughSeen, navigate])
 
   const goTo = (i) => {
@@ -192,9 +193,11 @@ export function Walkthrough() {
     return () => window.removeEventListener('resize', onResize)
   }, [index, spring])
 
+  // The far side of onboarding — where a new user who arrived by deep link
+  // finally gets the destination they were sent for.
   const finish = () => {
     markWalkthroughSeen()
-    navigate('/feed', { replace: true })
+    navigate(consumeRedirect() ?? '/feed', { replace: true })
   }
 
   const bind = useDrag(

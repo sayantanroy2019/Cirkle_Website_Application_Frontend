@@ -5,6 +5,7 @@ import { api, ApiError } from '../../lib/api.js'
 import { useAuthStore } from '../../store/authStore.js'
 import { resetUserStores } from '../../store/session.js'
 import { mapOtpError } from '../../lib/otpErrors.js'
+import { consumeRedirect } from '../../lib/redirect.js'
 import { routeForOnboardingStep } from './onboardingRoutes.js'
 
 // CROSS-LAYER COUPLING — the box count is not a free choice.
@@ -78,7 +79,13 @@ export function OtpVerification() {
       resetUserStores() // clear any previous user's cached data
       resetWalkthrough() // a fresh onboarding should see the walkthrough again
       setToken(data.token)
-      navigate(routeForOnboardingStep(data), { replace: true })
+
+      // A deep link is only claimed once the user is actually through
+      // onboarding. Someone mid-flow keeps their stored destination — the
+      // walkthrough consumes it on the far side, so a new user still reaches
+      // the ticket instead of losing it to the onboarding detour.
+      const next = routeForOnboardingStep(data)
+      navigate(next === '/feed' ? (consumeRedirect() ?? '/feed') : next, { replace: true })
     } catch (err) {
       const mapped = err instanceof ApiError ? mapOtpError(err) : null
       setApiError(mapped?.message ?? 'Something went wrong. Please try again.')
