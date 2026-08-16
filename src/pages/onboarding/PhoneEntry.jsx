@@ -3,26 +3,40 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Phone } from 'lucide-react'
 import { api, ApiError } from '../../lib/api.js'
 import { mapOtpError } from '../../lib/otpErrors.js'
-
-const PHONE_REGEX = /^[6-9]\d{9}$/
+import { countryByIso2, DEFAULT_COUNTRY, toE164 } from '../../lib/phone.js'
+import CountrySelect from '../../components/CountrySelect.jsx'
 
 export function PhoneEntry() {
   const navigate = useNavigate()
-  const [phone, setPhone] = useState('')
+  // India by default — the existing audience. Any other default would add
+  // friction for nearly every current user.
+  const [country, setCountry] = useState(() => countryByIso2(DEFAULT_COUNTRY))
+  const [national, setNational] = useState('')
   const [touched, setTouched] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [apiError, setApiError] = useState('')
   // Set by a rate_limit — sending again is the very thing to stop them doing.
   const [sendBlocked, setSendBlocked] = useState(false)
 
-  const isValid = PHONE_REGEX.test(phone)
-  const showError = touched && phone.length > 0 && !isValid
+  // Validated by the same library and version the backend uses, so the two
+  // sides agree. No hardcoded per-country rule: the old /^[6-9]\d{9}$/ would
+  // now reject Indian numbers the server accepts.
+  const e164 = toE164(country.callingCode, national)
+  const isValid = e164 !== null
+  const showError = touched && national.length > 0 && !isValid
 
   const handleChange = (e) => {
-    const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 10)
-    setPhone(digitsOnly)
+    // Keep only digits; length is the library's judgement, not a fixed cap,
+    // since national numbers differ per country.
+    setNational(e.target.value.replace(/\D/g, '').slice(0, 15))
     setApiError('')
     setSendBlocked(false) // a different number is a different rate-limit bucket
+  }
+
+  const handleCountryChange = (next) => {
+    setCountry(next)
+    setApiError('')
+    setSendBlocked(false)
   }
 
   // Sends the code only. No token is issued here — that happens at verify,
@@ -35,10 +49,12 @@ export function PhoneEntry() {
     setIsSubmitting(true)
     setApiError('')
     try {
-      await api.post('/auth/otp/send', { phone: `+91${phone}` }, { auth: false })
+      // Always canonical E.164 — the library has already stripped spacing,
+      // brackets and any leading zero.
+      await api.post('/auth/otp/send', { phone: e164 }, { auth: false })
       // isSubmitting stays true through the navigation, so a second tap during
       // the transition can't fire another send.
-      navigate('/otp', { state: { phone } })
+      navigate('/otp', { state: { phone: e164 } })
     } catch (err) {
       const mapped = err instanceof ApiError ? mapOtpError(err) : null
       setApiError(mapped?.message ?? 'Something went wrong. Please try again.')
@@ -79,24 +95,26 @@ export function PhoneEntry() {
               showError ? 'border-red-400' : 'border-cirkle-border-card focus-within:border-cirkle-yellow'
             }`}
           >
-            <span className="pl-4 pr-3 py-3 font-body text-[16px] text-white border-r border-cirkle-border-card">
-              +91
-            </span>
+            <CountrySelect
+              country={country}
+              onChange={handleCountryChange}
+              disabled={isSubmitting}
+            />
             <input
               type="tel"
               inputMode="numeric"
               autoComplete="tel-national"
-              placeholder="98765 43210"
-              value={phone}
+              placeholder="Mobile number"
+              value={national}
               onChange={handleChange}
               onBlur={() => setTouched(true)}
-              className="flex-1 bg-transparent px-4 py-3 font-body text-[16px] text-white placeholder:text-cirkle-text-placeholder appearance-none [-webkit-appearance:none] outline-none focus:outline-none [box-shadow:none] [-webkit-tap-highlight-color:transparent]"
+              className="flex-1 min-w-0 bg-transparent px-4 py-3 font-body text-[16px] text-white placeholder:text-cirkle-text-placeholder appearance-none [-webkit-appearance:none] outline-none focus:outline-none [box-shadow:none] [-webkit-tap-highlight-color:transparent]"
               aria-label="Phone number"
             />
           </div>
           {showError && (
             <p className="mt-2 font-body text-[13px] text-red-400">
-              Enter a valid 10-digit Indian mobile number.
+              Enter a valid mobile number, including your country code.
             </p>
           )}
           {apiError && !showError && (

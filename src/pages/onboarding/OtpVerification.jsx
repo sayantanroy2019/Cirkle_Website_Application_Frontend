@@ -6,6 +6,7 @@ import { useAuthStore } from '../../store/authStore.js'
 import { resetUserStores } from '../../store/session.js'
 import { mapOtpError } from '../../lib/otpErrors.js'
 import { consumeRedirect } from '../../lib/redirect.js'
+import { formatPhoneForDisplay } from '../../lib/phone.js'
 import { routeForOnboardingStep } from './onboardingRoutes.js'
 
 // CROSS-LAYER COUPLING — the box count is not a free choice.
@@ -25,10 +26,6 @@ import { routeForOnboardingStep } from './onboardingRoutes.js'
 const CODE_LENGTH = 6
 const RESEND_SECONDS = 30
 
-// Groups a 10-digit number as 98753 98942 for the "code sent to" line.
-function prettyPhone(digits) {
-  return digits.length === 10 ? `${digits.slice(0, 5)} ${digits.slice(5)}` : digits
-}
 
 export function OtpVerification() {
   const navigate = useNavigate()
@@ -71,7 +68,7 @@ export function OtpVerification() {
     try {
       const data = await api.post(
         '/auth/otp/verify',
-        { phone: `+91${phone}`, code },
+        { phone, code },
         { auth: false },
       )
       // Unchanged from the old login: same response shape, same routing. Only
@@ -135,7 +132,7 @@ export function OtpVerification() {
     setIsResending(true)
     setApiError('')
     try {
-      await api.post('/auth/otp/send', { phone: `+91${phone}` }, { auth: false })
+      await api.post('/auth/otp/send', { phone }, { auth: false })
       setDigits(Array(CODE_LENGTH).fill(''))
       setSecondsLeft(RESEND_SECONDS)
       inputRefs.current[0]?.focus()
@@ -179,7 +176,7 @@ export function OtpVerification() {
         {/* Channel-neutral by design: today it's SMS, later WhatsApp, and this
             copy is correct either way. */}
         <p className="opacity-0 animate-[fadeUp_0.5s_ease_forwards] [animation-delay:0.2s] mt-3 font-body text-[15px] text-cirkle-text-muted">
-          Code sent to <span className="text-white font-semibold">+91 {prettyPhone(phone)}</span>.{' '}
+          Code sent to <span className="text-white font-semibold">{formatPhoneForDisplay(phone)}</span>.{' '}
           <button
             type="button"
             onClick={() => navigate('/phone')}
