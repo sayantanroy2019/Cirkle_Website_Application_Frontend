@@ -117,7 +117,11 @@ export function TicketDetail() {
       <div className="max-w-[420px] w-full mx-auto">
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          // The ticket's semantic parent is My Tickets — named explicitly
+          // rather than navigate(-1), because "wherever I came from" might be
+          // the login flow (deep link) or the payment flow, neither of which
+          // is a place to send someone back to.
+          onClick={() => navigate('/tickets')}
           className="w-9 h-9 flex items-center justify-center rounded-full text-white transition-all duration-200 hover:bg-white/10 -ml-1.5"
           aria-label="Back"
         >

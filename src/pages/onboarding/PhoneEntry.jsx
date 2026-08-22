@@ -54,7 +54,12 @@ export function PhoneEntry() {
       await api.post('/auth/otp/send', { phone: e164 }, { auth: false })
       // isSubmitting stays true through the navigation, so a second tap during
       // the transition can't fire another send.
-      navigate('/otp', { state: { phone: e164 } })
+      //
+      // replace, not push: the whole login flow occupies ONE history entry,
+      // which the post-verify redirect overwrites. Back from wherever the
+      // user lands must never return to a login screen — login is a
+      // checkpoint, not a place.
+      navigate('/otp', { replace: true, state: { phone: e164 } })
     } catch (err) {
       const mapped = err instanceof ApiError ? mapOtpError(err) : null
       // The cooldown refusal means their code is ALREADY in WhatsApp — the
@@ -63,6 +68,7 @@ export function PhoneEntry() {
       // seconds drive the resend countdown on the next screen.
       if (mapped?.retryAfterSeconds != null) {
         navigate('/otp', {
+          replace: true,
           state: { phone: e164, alreadySent: true, resendIn: mapped.retryAfterSeconds },
         })
         return
