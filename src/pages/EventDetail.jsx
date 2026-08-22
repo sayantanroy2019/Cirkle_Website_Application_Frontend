@@ -156,7 +156,7 @@ function EventCta({
     if (invitationStatus === 'pending') {
       return (
         <button type="button" disabled className={`btn-primary ${base} opacity-40 pointer-events-none`}>
-          Invitation sent
+          Invite requested
         </button>
       )
     }
@@ -175,7 +175,7 @@ function EventCta({
         disabled={isRequestingInvite}
         className={`btn-primary ${base} disabled:opacity-40 disabled:pointer-events-none`}
       >
-        {isRequestingInvite ? 'Sending…' : 'Send invitation'}
+        {isRequestingInvite ? 'Requesting…' : 'Request invite'}
       </button>
     )
   }
@@ -256,8 +256,8 @@ function EventInfoBlock({
         {/* The key is load-bearing, not decoration.
             Without it React reuses one <button> and swaps its text and opacity
             in place. Because .btn-primary carries `transition-all`, iOS Safari
-            was compositing the new label over the old frame — "Send invitation"
-            and "Invitation sent" visibly stacked, at the pre-change brightness,
+            was compositing the new label over the old frame — "Request invite"
+            and "Invite requested" visibly stacked, at the pre-change brightness,
             until a navigation forced a repaint.
             Changing the key remounts the component, so each CTA state gets a
             fresh element and there is no in-place mutation to leave a ghost. */}
