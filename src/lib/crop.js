@@ -18,18 +18,10 @@ function isHeic(file) {
 // Browsers can't draw HEIC to a canvas, so decode it to JPEG *before* cropping.
 // JPEG/PNG/WebP pass through untouched. Returns a canvas-drawable Blob/File.
 export async function decodeForCrop(file) {
-  // Diagnostic — shows exactly which path a file takes. Safe to remove later.
-  console.info('[crop] picked file', { type: file.type, name: file.name, size: file.size, heic: isHeic(file) })
-
   if (isHeic(file)) {
     const { default: heic2any } = await import('heic2any')
-    console.time('[crop] heic2any decode')
-    try {
-      const out = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 })
-      return Array.isArray(out) ? out[0] : out
-    } finally {
-      console.timeEnd('[crop] heic2any decode')
-    }
+    const out = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 })
+    return Array.isArray(out) ? out[0] : out
   }
   if (!CROPPABLE_TYPES.includes(file.type)) {
     throw new Error('Only JPEG, PNG, and WebP images are allowed.')
@@ -48,13 +40,8 @@ function loadImage(src) {
 
 // Render the chosen crop region to a canvas and export a WebP File, capped to
 // `maxLong` on the long edge (no upscaling), ~0.8 quality.
-export async function getCroppedWebp(imageSrc, cropPixels, { maxLong = 1080, quality = 0.8 } = {}) {
-  console.time('[crop] webp export')
-  try {
-    return await exportWebp(imageSrc, cropPixels, maxLong, quality)
-  } finally {
-    console.timeEnd('[crop] webp export')
-  }
+export function getCroppedWebp(imageSrc, cropPixels, { maxLong = 1080, quality = 0.8 } = {}) {
+  return exportWebp(imageSrc, cropPixels, maxLong, quality)
 }
 
 async function exportWebp(imageSrc, cropPixels, maxLong, quality) {

@@ -4,6 +4,7 @@ import { ChevronRight, Pencil, Eye, CalendarDays } from 'lucide-react'
 import { useAuthStore } from '../store/authStore.js'
 import { useProfileStore } from '../store/profileStore.js'
 import { resetUserStores } from '../store/session.js'
+import { clearRedirect } from '../lib/redirect.js'
 import {
   SOCIAL_PLATFORMS,
   PLATFORM_LABELS,
@@ -193,6 +194,7 @@ export function Profile() {
   const handleLogout = () => {
     clearToken()
     resetUserStores()
+    clearRedirect() // a stored deep-link destination must not outlive the session that captured it
     navigate('/')
   }
 
