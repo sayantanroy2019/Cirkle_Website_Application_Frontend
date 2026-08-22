@@ -51,10 +51,11 @@ export function EmailStep() {
         </span>
 
         <h1 className="mt-6 font-display text-section-lg text-white uppercase">
-          Where should we send your tickets?
+          What&apos;s your email?
         </h1>
         <p className="mt-3 font-body text-[15px] text-cirkle-text-muted">
-          Used only for ticket delivery and reminders — never for login.
+          We&apos;ll use your email to send you communications, including tickets. It won&apos;t
+          be given to organisers or other people attending events.
         </p>
 
         <div className="mt-8">

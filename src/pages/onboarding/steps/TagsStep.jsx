@@ -73,7 +73,7 @@ export function TagsStep() {
     try {
       await api.patch('/onboarding/step/5', { lifestyleTagIds: selectedIds })
       updateProfile({ lifestyleTagIds: selectedIds })
-      navigate('/onboarding/photos')
+      navigate('/onboarding/vibe')
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Something went wrong. Please try again.'
       setApiError(message)

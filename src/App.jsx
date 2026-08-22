@@ -2,6 +2,8 @@ import { Routes, Route, Outlet } from 'react-router-dom'
 import Landing from './pages/onboarding/Landing.jsx'
 import PhoneEntry from './pages/onboarding/PhoneEntry.jsx'
 import OtpVerification from './pages/onboarding/OtpVerification.jsx'
+import OnboardingIntro from './pages/onboarding/OnboardingIntro.jsx'
+import OnboardingVibe from './pages/onboarding/OnboardingVibe.jsx'
 import NameStep from './pages/onboarding/steps/NameStep.jsx'
 import DobStep from './pages/onboarding/steps/DobStep.jsx'
 import GenderStep from './pages/onboarding/steps/GenderStep.jsx'
@@ -37,11 +39,13 @@ function App() {
       {/* Authenticated, but capture={false}: the resume point comes from the
           verify response, so a remembered onboarding URL would only mislead. */}
       <Route path="/onboarding" element={<RequireAuth capture={false}><Outlet /></RequireAuth>}>
+        <Route path="intro" element={<OnboardingIntro />} />
         <Route path="name" element={<NameStep />} />
         <Route path="dob" element={<DobStep />} />
         <Route path="gender" element={<GenderStep />} />
         <Route path="city" element={<CityStep />} />
         <Route path="tags" element={<TagsStep />} />
+        <Route path="vibe" element={<OnboardingVibe />} />
         <Route path="photos" element={<PhotosStep />} />
         <Route path="email" element={<EmailStep />} />
       </Route>

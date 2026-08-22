@@ -70,6 +70,14 @@
     to   { opacity: 1; transform: translateY(0); }
   }
 
+  /* Onboarding interstitials: the full-bleed photo settles from a slight zoom —
+     one slow cinematic move, then still. Not a loop; motion that never ends
+     reads as busy on a page whose whole job is calm. */
+  @keyframes slowSettle {
+    from { transform: scale(1.08); }
+    to   { transform: scale(1); }
+  }
+
   /* Walkthrough: nudging swipe-left hint on screen 1 */
   @keyframes swipeHint {
     0%, 100% { transform: translateX(6px);  opacity: 0.45; }
