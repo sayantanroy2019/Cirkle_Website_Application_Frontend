@@ -18,7 +18,7 @@ Related specs already written (in the frontend repo root):
 
 | ID | Side | Priority | Item | Status |
 |----|------|----------|------|--------|
-| F1 | FE | Now | Deploy security-fix batch, verify headers live | pending |
+| F1 | FE | Now | Deploy security-fix batch, verify headers live | **done 2026-08-23** — all 5 headers verified on /, /phone, /tickets/* |
 | F2 | FE | Now | Real-browser click-through pass | pending |
 | F3 | FE | Now | iOS retest of CTA ghost-paint fix | pending |
 | F4 | FE | Now | Real-SMS OTP round trip, one intl number | pending |
