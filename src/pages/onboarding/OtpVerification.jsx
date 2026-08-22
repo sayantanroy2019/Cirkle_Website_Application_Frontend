@@ -31,12 +31,18 @@ export function OtpVerification() {
   const navigate = useNavigate()
   const location = useLocation()
   const phone = location.state?.phone ?? ''
+  // True when PhoneEntry escorted the user here off a cooldown refusal —
+  // their code was ALREADY sent (back-button + resubmit is the classic
+  // path). The copy acknowledges it and the countdown honors the server's
+  // remaining seconds rather than restarting from the default.
+  const alreadySent = location.state?.alreadySent === true
+  const initialResendSeconds = location.state?.resendIn ?? RESEND_SECONDS
 
   const setToken = useAuthStore((s) => s.setToken)
   const resetWalkthrough = useAuthStore((s) => s.resetWalkthrough)
 
   const [digits, setDigits] = useState(Array(CODE_LENGTH).fill(''))
-  const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS)
+  const [secondsLeft, setSecondsLeft] = useState(initialResendSeconds)
   const [isVerifying, setIsVerifying] = useState(false)
   const [isResending, setIsResending] = useState(false)
   const [apiError, setApiError] = useState('')
@@ -138,8 +144,15 @@ export function OtpVerification() {
       inputRefs.current[0]?.focus()
     } catch (err) {
       const mapped = err instanceof ApiError ? mapOtpError(err) : null
-      setApiError(mapped?.message ?? 'Something went wrong. Please try again.')
-      if (mapped?.blocksSend) setResendBlocked(true)
+      // Cooldown refusal: the previous code is still valid — nothing is
+      // wrong. Restart the countdown at the server's remaining seconds
+      // instead of showing an error over a working situation.
+      if (mapped?.retryAfterSeconds != null) {
+        setSecondsLeft(mapped.retryAfterSeconds)
+      } else {
+        setApiError(mapped?.message ?? 'Something went wrong. Please try again.')
+        if (mapped?.blocksSend) setResendBlocked(true)
+      }
     } finally {
       setIsResending(false)
     }
@@ -176,7 +189,9 @@ export function OtpVerification() {
         {/* Channel-neutral by design: today it's SMS, later WhatsApp, and this
             copy is correct either way. */}
         <p className="opacity-0 animate-[fadeUp_0.5s_ease_forwards] [animation-delay:0.2s] mt-3 font-body text-[15px] text-cirkle-text-muted">
-          Code sent to <span className="text-white font-semibold">{formatPhoneForDisplay(phone)}</span>.{' '}
+          {alreadySent ? 'We already sent a code to ' : 'Code sent to '}
+          <span className="text-white font-semibold">{formatPhoneForDisplay(phone)}</span>
+          {alreadySent ? ' — check your messages.' : '.'}{' '}
           <button
             type="button"
             onClick={() => navigate('/phone')}

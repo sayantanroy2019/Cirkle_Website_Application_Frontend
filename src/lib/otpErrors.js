@@ -32,20 +32,28 @@ const FALLBACK = 'Something went wrong. Please try again.'
 /**
  * Turns an ApiError into what the screen should do about it.
  *
- * @returns {{ code, message, isFieldError, blocksSend, retryable }}
+ * @returns {{ code, message, isFieldError, blocksSend, retryable, retryAfterSeconds }}
  */
 export function mapOtpError(err) {
   const code = err?.code ?? null
+  // Present only on the resend-cooldown 429 — and its presence changes the
+  // meaning entirely: a cooldown refusal PROVES a valid code is already in
+  // the user's WhatsApp. The per-IP budget 429 never carries it.
+  const retryAfterSeconds =
+    typeof err?.data?.retryAfterSeconds === 'number' ? err.data.retryAfterSeconds : null
   return {
     code,
     message: COPY[code] ?? FALLBACK,
     // Phone-shaped problems belong under the phone input, not in a banner.
     isFieldError: code === OtpError.INVALID_PHONE || code === OtpError.INVALID_RECIPIENT,
     // A live send/resend button during a rate limit invites the user to make
-    // the rate limit worse. Disable it rather than only showing text.
-    blocksSend: code === OtpError.RATE_LIMITED,
+    // the rate limit worse. Disable it rather than only showing text — but
+    // only for the budget-style limit. The cooldown case escorts the user
+    // forward instead (callers branch on retryAfterSeconds).
+    blocksSend: code === OtpError.RATE_LIMITED && retryAfterSeconds === null,
     // Nothing is wrong with what they typed — keep them in place and let them
     // try again.
     retryable: code === OtpError.TIMEOUT || code === OtpError.PROVIDER_ERROR,
+    retryAfterSeconds,
   }
 }

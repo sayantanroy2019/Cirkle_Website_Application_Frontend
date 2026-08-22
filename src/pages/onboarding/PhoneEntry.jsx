@@ -57,6 +57,16 @@ export function PhoneEntry() {
       navigate('/otp', { state: { phone: e164 } })
     } catch (err) {
       const mapped = err instanceof ApiError ? mapOtpError(err) : null
+      // The cooldown refusal means their code is ALREADY in WhatsApp — the
+      // classic trigger is back-button + resubmit. Escort them forward to
+      // enter it instead of dead-ending them here; the server's remaining
+      // seconds drive the resend countdown on the next screen.
+      if (mapped?.retryAfterSeconds != null) {
+        navigate('/otp', {
+          state: { phone: e164, alreadySent: true, resendIn: mapped.retryAfterSeconds },
+        })
+        return
+      }
       setApiError(mapped?.message ?? 'Something went wrong. Please try again.')
       if (mapped?.blocksSend) setSendBlocked(true)
       setIsSubmitting(false)
