@@ -24,9 +24,16 @@ export function EventCard({ event, categoryLabel, onClick }) {
         {categoryLabel && (
           <span className="absolute top-3 left-3 chip">{categoryLabel}</span>
         )}
-        <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-cirkle-yellow text-cirkle-text-dark font-body text-[12px] font-bold">
-          {formatPrice(event.price)}
-        </span>
+        {/* Only when there is a real price. The legacy price column is 0 for
+            events priced through ticket categories (which the list payload
+            doesn't carry), so a falsy price here means "unknown", not "free" —
+            and formatPrice's 'Free' fallback was branding paid events as free.
+            The detail page shows the true category prices. */}
+        {event.price > 0 && (
+          <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-cirkle-yellow text-cirkle-text-dark font-body text-[12px] font-bold">
+            {formatPrice(event.price)}
+          </span>
+        )}
       </div>
       <div className="p-4">
         <h3 className="font-body text-base font-bold text-white">{event.name}</h3>
@@ -38,6 +45,7 @@ export function EventCard({ event, categoryLabel, onClick }) {
           <MapPin size={14} className="text-cirkle-yellow shrink-0" strokeWidth={2} />
           <span className="truncate">{event.venueName}</span>
         </div>
+
       </div>
     </button>
   )
