@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 // Upload, Bookmark, Share2, MoreHorizontal are commented out along with the
 // share/save/more buttons below — add them back here when those are implemented.
-import { ArrowLeft, MapPin, CalendarDays } from 'lucide-react'
+import { ArrowLeft, MapPin, CalendarDays, FileText } from 'lucide-react'
 import { api, ApiError } from '../lib/api.js'
 import { useEventsStore, selectEventById } from '../store/eventsStore.js'
 import { formatPrice, formatEventDay, formatEventTime, instagramUrl } from '../lib/format.js'
@@ -312,6 +312,38 @@ function EventAbout({ about }) {
       >
         {expanded ? 'Show less' : 'Read more'}
       </button>
+
+      <hr className="border-cirkle-border mt-5" />
+    </section>
+  )
+}
+
+// ─── Itinerary ────────────────────────────────────────────────────────────────
+// Only rendered when the organizer uploaded an itinerary PDF — the caller
+// guards on event.itineraryUrl, so an event without one shows no trace of
+// this section. The URL is presigned (~1hr): always taken fresh from the
+// event fetch, never cached.
+function EventItinerary({ url }) {
+  return (
+    <section className="bg-cirkle-black px-4 pt-5 pb-4">
+      <h3 className="font-body text-[20px] font-bold text-white mb-3">Itinerary</h3>
+
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-3 rounded-xl border border-cirkle-border-card bg-cirkle-card px-4 py-3.5 hover:border-cirkle-yellow transition-colors duration-200"
+      >
+        <FileText size={20} className="shrink-0 text-cirkle-yellow" aria-hidden="true" />
+        <span className="min-w-0 flex-1">
+          <span className="block font-body text-[14px] font-semibold text-white">
+            Event itinerary
+          </span>
+          <span className="block font-body text-[12px] text-cirkle-text-muted">
+            PDF · tap to view or download
+          </span>
+        </span>
+      </a>
 
       <hr className="border-cirkle-border mt-5" />
     </section>
@@ -667,6 +699,7 @@ export function EventDetail() {
               onRequestInvite={handleRequestInvite}
             />
             {event.description && <EventAbout about={event.description} />}
+            {event.itineraryUrl && <EventItinerary url={event.itineraryUrl} />}
             {event.artists?.length > 0 && <EventLineup artists={event.artists} />}
             {event.gallery?.length > 0 && <EventGallery gallery={event.gallery} />}
             <EventVenue name={event.venueName} address={event.venueAddress} />
