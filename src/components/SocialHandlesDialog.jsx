@@ -22,7 +22,7 @@ function labelList(platforms) {
  * `onSaved`, which retries the action that was blocked. Cancelling abandons
  * that action entirely.
  */
-export function SocialHandlesDialog({ missing, onCancel, onSaved }) {
+export function SocialHandlesDialog({ missing, googleFormUrl = null, onCancel, onSaved }) {
   const applyProfileUpdate = useProfileStore((s) => s.applyUpdate)
 
   const [values, setValues] = useState(() =>
@@ -31,6 +31,9 @@ export function SocialHandlesDialog({ missing, onCancel, onSaved }) {
   const [errors, setErrors] = useState({})
   const [isSaving, setIsSaving] = useState(false)
   const [apiError, setApiError] = useState('')
+  // The app cannot verify a Google Form submission — the checkbox is the
+  // user's word, and the organizer cross-checks responses before accepting.
+  const [formConfirmed, setFormConfirmed] = useState(false)
 
   const setValue = (platform, value) => {
     setValues((prev) => ({ ...prev, [platform]: value }))
@@ -39,10 +42,11 @@ export function SocialHandlesDialog({ missing, onCancel, onSaved }) {
   const setError = (platform, error) =>
     setErrors((prev) => ({ ...prev, [platform]: error }))
 
-  // Hard gate: every missing handle must be filled, with no inline errors.
+  // Hard gate: every missing handle must be filled, with no inline errors —
+  // and when the organizer attached a form, its confirmation box too.
   const allFilled = missing.every((p) => (values[p] ?? '').trim() !== '')
   const noErrors = missing.every((p) => !errors[p])
-  const canSubmit = allFilled && noErrors && !isSaving
+  const canSubmit = allFilled && noErrors && !isSaving && (!googleFormUrl || formConfirmed)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -72,9 +76,12 @@ export function SocialHandlesDialog({ missing, onCancel, onSaved }) {
     setIsSaving(true)
     setApiError('')
     try {
-      await api.patch('/profile/me', payload)
-      // PATCH returns no body — merge locally so the gate sees the new handles.
-      applyProfileUpdate(payload)
+      // A form-only gate (missing = []) has no profile change to save.
+      if (Object.keys(payload).length > 0) {
+        await api.patch('/profile/me', payload)
+        // PATCH returns no body — merge locally so the gate sees the new handles.
+        applyProfileUpdate(payload)
+      }
       await onSaved()
     } catch (err) {
       setApiError(
@@ -97,7 +104,9 @@ export function SocialHandlesDialog({ missing, onCancel, onSaved }) {
             id="social-gate-title"
             className="font-body text-[20px] font-bold text-white leading-snug"
           >
-            Add your {labelList(missing)}
+            {missing.length > 0
+              ? `Add your ${labelList(missing)}`
+              : 'A few questions first'}
           </h2>
           <button
             type="button"
@@ -110,20 +119,52 @@ export function SocialHandlesDialog({ missing, onCancel, onSaved }) {
           </button>
         </div>
 
-        <p className="mt-2 font-body text-[14px] text-cirkle-text-muted leading-relaxed">
-          This event requires you to add your {labelList(missing)} to attend.
-        </p>
+        {missing.length > 0 && (
+          <p className="mt-2 font-body text-[14px] text-cirkle-text-muted leading-relaxed">
+            This event requires you to add your {labelList(missing)} to attend.
+          </p>
+        )}
 
         <form onSubmit={handleSubmit} className="mt-5">
-          <SocialHandleFields
-            platforms={missing}
-            values={values}
-            errors={errors}
-            onChange={setValue}
-            onErrorChange={setError}
-            idPrefix="gate"
-            autoFocusFirst
-          />
+          {missing.length > 0 && (
+            <SocialHandleFields
+              platforms={missing}
+              values={values}
+              errors={errors}
+              onChange={setValue}
+              onErrorChange={setError}
+              idPrefix="gate"
+              autoFocusFirst
+            />
+          )}
+
+          {googleFormUrl && (
+            <div className={missing.length > 0 ? 'mt-6' : ''}>
+              <p className="font-body text-[14px] text-cirkle-text-muted leading-relaxed">
+                The organizer has a few extra questions for this event. Fill out
+                their form — they review answers before accepting requests.
+              </p>
+              <a
+                href={googleFormUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 block w-full rounded-full border border-cirkle-border-card px-8 py-3 text-center font-body text-[15px] font-semibold text-white transition-colors duration-200 hover:bg-white/10"
+              >
+                Open the form
+              </a>
+              <label className="mt-4 flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={formConfirmed}
+                  onChange={(e) => setFormConfirmed(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-cirkle-yellow"
+                />
+                <span className="font-body text-[14px] text-white">
+                  I've filled out the form
+                </span>
+              </label>
+            </div>
+          )}
 
           {apiError && (
             <p className="mt-4 font-body text-[13px] text-red-400">{apiError}</p>
@@ -134,7 +175,9 @@ export function SocialHandlesDialog({ missing, onCancel, onSaved }) {
             disabled={!canSubmit}
             className="btn-primary w-full px-8 py-3.5 mt-6 disabled:opacity-40 disabled:pointer-events-none"
           >
-            {isSaving ? 'Saving…' : 'Save and continue'}
+            {missing.length > 0
+              ? isSaving ? 'Saving…' : 'Save and continue'
+              : isSaving ? 'Sending…' : 'Continue'}
           </button>
           <button
             type="button"

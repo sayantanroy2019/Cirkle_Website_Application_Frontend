@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 // Upload, Bookmark, Share2, MoreHorizontal are commented out along with the
 // share/save/more buttons below — add them back here when those are implemented.
@@ -571,8 +571,13 @@ export function EventDetail() {
   const [fetchedEvent, setFetchedEvent] = useState(null)
   const [loadError, setLoadError] = useState('')
   const [isRequestingInvite, setIsRequestingInvite] = useState(false)
-  // Non-null when an action was blocked by the social-handle gate.
+  // Non-null when an action was blocked by the social-handle gate. An empty
+  // array is a legitimate value: the organizer's Google Form alone can open
+  // the gate with no handles to collect.
   const [gateMissing, setGateMissing] = useState(null)
+  // The user's word that they filled the organizer's form, once per visit —
+  // a ref so the retry inside onSaved sees it immediately.
+  const formConfirmedRef = useRef(false)
   // Who's Going preview — fetched separately from the event itself.
   const [attendees, setAttendees] = useState([])
   const [attendeeTotal, setAttendeeTotal] = useState(0)
@@ -638,6 +643,13 @@ export function EventDetail() {
 
   const handleRequestInvite = async () => {
     if (isRequestingInvite) return
+    // The organizer's extra questions come BEFORE the request is sent — the
+    // gate opens proactively (form-only if no handles turn out to be
+    // missing; the server's 403 still adds handle fields if they are).
+    if (event?.googleFormUrl && !formConfirmedRef.current) {
+      setGateMissing([])
+      return
+    }
     setIsRequestingInvite(true)
     try {
       const res = await api.post(`/events/${id}/invitations`)
@@ -721,10 +733,14 @@ export function EventDetail() {
       {gateMissing && (
         <SocialHandlesDialog
           missing={gateMissing}
+          // Shown until confirmed once; after that, a handle-only reopen
+          // (from the server's 403) skips the form section.
+          googleFormUrl={formConfirmedRef.current ? null : (event?.googleFormUrl ?? null)}
           // Cancel abandons the request — the gate runs before the invitation
           // row is created, so nothing was written.
           onCancel={() => setGateMissing(null)}
           onSaved={async () => {
+            formConfirmedRef.current = true
             setGateMissing(null)
             await handleRequestInvite()
           }}
