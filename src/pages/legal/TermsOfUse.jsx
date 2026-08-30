@@ -1,5 +1,5 @@
-import { useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
+import { useBackOr } from '../../lib/navigation.js'
 
 // Typographic helpers for the legal document.
 function H({ children }) {
@@ -26,7 +26,9 @@ function Lead({ children }) {
 }
 
 export function TermsOfUse() {
-  const navigate = useNavigate()
+  // Reachable from outside the app (payment-provider and search links), so
+  // back must have somewhere to go when this is the first page in the tab.
+  const goBack = useBackOr('/')
 
   return (
     <div className="bg-cirkle-black h-[100dvh] flex flex-col overflow-hidden">
@@ -35,7 +37,7 @@ export function TermsOfUse() {
         <div className="flex items-center gap-2 max-w-[720px] mx-auto w-full px-4 h-14">
           <button
             type="button"
-            onClick={() => navigate(-1)}
+            onClick={goBack}
             className="w-9 h-9 flex items-center justify-center rounded-full text-white transition-all duration-200 hover:bg-white/10 -ml-1.5"
             aria-label="Back"
           >

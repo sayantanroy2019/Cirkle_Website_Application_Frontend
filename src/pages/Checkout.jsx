@@ -22,6 +22,7 @@ import {
 } from '../lib/eventGate.js'
 import SocialHandlesDialog from '../components/SocialHandlesDialog.jsx'
 import HoldCountdown from '../components/HoldCountdown.jsx'
+import { useBackOr } from '../lib/navigation.js'
 
 const rupees = (paise) => `₹${(paise / 100).toLocaleString('en-IN')}`
 
@@ -42,6 +43,9 @@ export function Checkout() {
   const { eventId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
+  // Normally returns to the ticket picker; if this is the first page in the
+  // tab (restored session, pasted URL), the event itself is the parent.
+  const goBack = useBackOr(`/events/${eventId}`)
 
   // The ticket category chosen on the event detail page. Order creation does
   // not accept a category yet (Part 4) — this is carried and displayed so the
@@ -269,7 +273,7 @@ export function Checkout() {
         <div className="max-w-[440px] w-full mx-auto flex-1 flex flex-col">
           <button
             type="button"
-            onClick={() => navigate(-1)}
+            onClick={goBack}
             className="w-9 h-9 flex items-center justify-center rounded-full text-white transition-all duration-200 hover:bg-white/10 -ml-1.5"
             aria-label="Back"
           >
@@ -298,7 +302,7 @@ export function Checkout() {
       <div className="max-w-[440px] w-full mx-auto flex-1 flex flex-col">
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={goBack}
           className="w-9 h-9 flex items-center justify-center rounded-full text-white transition-all duration-200 hover:bg-white/10 -ml-1.5"
           aria-label="Back"
         >

@@ -5,6 +5,7 @@ import { api, ApiError } from '../lib/api.js'
 import { useEventsStore, selectEventById } from '../store/eventsStore.js'
 import { formatPrice, formatEventDateTime } from '../lib/format.js'
 import TicketCategorySelector from '../components/TicketCategorySelector.jsx'
+import { useBackOr } from '../lib/navigation.js'
 
 // Step between the event and checkout: pick which ticket you're buying.
 // Fetches the event itself rather than relying on router state, so a refresh or
@@ -12,6 +13,8 @@ import TicketCategorySelector from '../components/TicketCategorySelector.jsx'
 export function EventTickets() {
   const { id } = useParams()
   const navigate = useNavigate()
+  // Back to the event; the event page itself if this is the first page in the tab.
+  const goBack = useBackOr(`/events/${id}`)
 
   const cachedEvent = useEventsStore(selectEventById(id))
   const [fetchedEvent, setFetchedEvent] = useState(null)
@@ -57,7 +60,7 @@ export function EventTickets() {
       <header className="sticky top-0 z-40 bg-cirkle-black border-b border-cirkle-border flex items-center px-4 h-14">
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={goBack}
           className="w-9 h-9 flex items-center justify-center text-white transition-opacity duration-200 hover:opacity-70 -ml-1.5"
           aria-label="Back"
         >

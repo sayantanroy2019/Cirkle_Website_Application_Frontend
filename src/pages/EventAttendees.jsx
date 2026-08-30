@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { ArrowLeft, ChevronRight } from 'lucide-react'
 import { api, ApiError } from '../lib/api.js'
 import PersonAvatar from '../components/PersonAvatar.jsx'
 import AttendeeProfileSheet from '../components/AttendeeProfileSheet.jsx'
+import { useBackOr } from '../lib/navigation.js'
 
 const PAGE_SIZE = 50
 
 export function EventAttendees() {
   const { id } = useParams()
-  const navigate = useNavigate()
+  // Back to the event; the event page itself if this is the first page in the tab.
+  const goBack = useBackOr(`/events/${id}`)
 
   const [attendees, setAttendees] = useState([])
   const [total, setTotal] = useState(0)
@@ -73,7 +75,7 @@ export function EventAttendees() {
       <header className="sticky top-0 z-40 bg-cirkle-black border-b border-cirkle-border flex items-center px-4 h-14">
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={goBack}
           className="w-9 h-9 flex items-center justify-center text-white transition-opacity duration-200 hover:opacity-70 -ml-1.5"
           aria-label="Back"
         >

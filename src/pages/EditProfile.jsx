@@ -8,6 +8,7 @@ import PhotoGrid from '../components/PhotoGrid.jsx'
 import SocialHandleFields from '../components/SocialHandleFields.jsx'
 import { keyFromPhotoUrl } from '../lib/uploads.js'
 import { SOCIAL_PLATFORMS, normalizeHandle } from '../lib/socialHandles.js'
+import { useBackOr } from '../lib/navigation.js'
 
 const MIN_NAME = 2
 const MIN_PHOTOS = 2
@@ -48,6 +49,7 @@ function EditProfileSkeleton() {
 
 export function EditProfile() {
   const navigate = useNavigate()
+  const goBack = useBackOr('/profile')
 
   const profile = useProfileStore((s) => s.profile)
   const profileError = useProfileStore((s) => s.error)
@@ -218,7 +220,7 @@ export function EditProfile() {
       <header className="sticky top-0 z-40 bg-cirkle-black border-b border-cirkle-border flex items-center justify-between px-4 h-14">
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={goBack}
           className="w-9 h-9 flex items-center justify-center text-white transition-all duration-200 hover:opacity-70 -ml-1.5"
           aria-label="Back"
         >

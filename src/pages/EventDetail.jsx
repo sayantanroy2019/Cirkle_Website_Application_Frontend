@@ -20,6 +20,7 @@ import {
   formNeededFor,
   markFormConfirmed,
 } from '../lib/eventGate.js'
+import { useBackOr } from '../lib/navigation.js'
 
 // Only the first few attendees are needed for the avatar row — "See All" opens
 // the paginated list. `total` from the response drives the count and +N badge.
@@ -582,6 +583,9 @@ function EventFindYourTribe({ groups }) {
 export function EventDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  // A shared link opens this page as the first entry in a fresh tab; back
+  // then lands on the feed instead of leaving the app.
+  const goBack = useBackOr('/feed')
 
   // Stale-while-revalidate: paint the cached event instantly (from the feed),
   // then fetch the detail in the background — the detail carries
@@ -718,7 +722,7 @@ export function EventDetail() {
 
   return (
     <div className="bg-cirkle-black h-[100dvh] flex flex-col overflow-hidden">
-      <EventDetailHeader onBack={() => navigate(-1)} />
+      <EventDetailHeader onBack={goBack} />
 
       <main className="flex-1 min-h-0 overflow-y-auto">
         {isLoading && (

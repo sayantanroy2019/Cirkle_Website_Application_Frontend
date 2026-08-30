@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Search, Check } from 'lucide-react'
 import { useActiveCity } from '../store/cityStore.js'
+import { useBackOr } from '../lib/navigation.js'
 
 export function CitySwitcher() {
   const navigate = useNavigate()
+  const goBack = useBackOr('/feed')
   const { cities, activeCityId, setActiveCityId, isLoading } = useActiveCity()
   const [query, setQuery] = useState('')
 
@@ -22,7 +24,7 @@ export function CitySwitcher() {
       <div className="max-w-[400px] w-full mx-auto flex flex-col flex-1">
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={goBack}
           className="w-9 h-9 flex items-center justify-center rounded-full text-white transition-all duration-200 hover:bg-white/10 -ml-1.5"
           aria-label="Back"
         >
