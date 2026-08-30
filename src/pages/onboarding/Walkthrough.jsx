@@ -5,6 +5,7 @@ import { useDrag } from '@use-gesture/react'
 import { Music2, CalendarDays, MapPin, Ticket, ArrowRight, ChevronLeft } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 import { consumeRedirect } from '../../lib/redirect.js'
+import { markHistoryFloor } from '../../lib/navigation.js'
 
 // Drop a licensed portrait (Unsplash/Pexels — free for commercial use) at
 // public/walkthrough/aisha.jpg. If it's missing, cards fall back to the
@@ -177,7 +178,10 @@ export function Walkthrough() {
   // Guard: if already dismissed (e.g. manual nav or refresh after finishing),
   // don't show it again — go straight to the Feed.
   useEffect(() => {
-    if (walkthroughSeen) navigate(consumeRedirect() ?? '/feed', { replace: true })
+    if (walkthroughSeen) {
+      markHistoryFloor()
+      navigate(consumeRedirect() ?? '/feed', { replace: true })
+    }
   }, [walkthroughSeen, navigate])
 
   const goTo = (i) => {
@@ -197,6 +201,9 @@ export function Walkthrough() {
   // finally gets the destination they were sent for.
   const finish = () => {
     markWalkthroughSeen()
+    // The onboarding steps behind this entry are finished business: mark this
+    // landing as the floor so in-app "back" never steps into them.
+    markHistoryFloor()
     navigate(consumeRedirect() ?? '/feed', { replace: true })
   }
 

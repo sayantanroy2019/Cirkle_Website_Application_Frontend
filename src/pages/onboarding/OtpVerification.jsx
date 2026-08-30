@@ -6,6 +6,7 @@ import { useAuthStore } from '../../store/authStore.js'
 import { resetUserStores } from '../../store/session.js'
 import { mapOtpError } from '../../lib/otpErrors.js'
 import { consumeRedirect } from '../../lib/redirect.js'
+import { markHistoryFloor } from '../../lib/navigation.js'
 import { formatPhoneForDisplay } from '../../lib/phone.js'
 import { routeForOnboardingStep } from './onboardingRoutes.js'
 
@@ -88,7 +89,12 @@ export function OtpVerification() {
       // walkthrough consumes it on the far side, so a new user still reaches
       // the ticket instead of losing it to the onboarding detour.
       const next = routeForOnboardingStep(data)
-      navigate(next === '/feed' ? (consumeRedirect() ?? '/feed') : next, { replace: true })
+      const landing = next === '/feed'
+      // Landing an onboarded user: nothing before this entry is "back" —
+      // the login screens were replaces. A new user's floor is set by the
+      // walkthrough instead, once onboarding is behind them.
+      if (landing) markHistoryFloor()
+      navigate(landing ? (consumeRedirect() ?? '/feed') : next, { replace: true })
     } catch (err) {
       const mapped = err instanceof ApiError ? mapOtpError(err) : null
       setApiError(mapped?.message ?? 'Something went wrong. Please try again.')
