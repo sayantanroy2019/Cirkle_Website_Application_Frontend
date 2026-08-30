@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 // Upload, Bookmark, Share2, MoreHorizontal are commented out along with the
 // share/save/more buttons below — add them back here when those are implemented.
@@ -14,6 +14,12 @@ import SocialHandlesDialog from '../components/SocialHandlesDialog.jsx'
 import PersonAvatar from '../components/PersonAvatar.jsx'
 import AttendeeProfileSheet from '../components/AttendeeProfileSheet.jsx'
 import { socialGateMissing, PLATFORM_LABELS } from '../lib/socialHandles.js'
+import {
+  requiredHandlesFor,
+  missingHandles,
+  formNeededFor,
+  markFormConfirmed,
+} from '../lib/eventGate.js'
 
 // Only the first few attendees are needed for the avatar row — "See All" opens
 // the paginated list. `total` from the response drives the count and +N badge.
@@ -202,6 +208,18 @@ const INVITE_NOTE = {
   accepted: "You're approved — you can buy your ticket.",
 }
 
+// Heads-up copy so the gate isn't a surprise. Names the action the organizer's
+// requirements stand in front of, since it differs by event type.
+function requirementNote(requiredHandles, hasForm, eventType) {
+  const labels = requiredHandles.map((p) => PLATFORM_LABELS[p]).join(' and ')
+  const action = eventType === 'invite_only' ? 'to request an invite' : 'to buy a ticket'
+  if (requiredHandles.length > 0 && hasForm) {
+    return `Requires your ${labels} and a short form from the organizer ${action}.`
+  }
+  if (hasForm) return `The organizer asks a few questions ${action}.`
+  return `Requires your ${labels} to attend.`
+}
+
 function EventInfoBlock({
   title,
   location,
@@ -210,6 +228,7 @@ function EventInfoBlock({
   price,
   organizerInstagram,
   requiredHandles,
+  hasForm,
   userHasTicket,
   eventType,
   invitationStatus,
@@ -282,12 +301,12 @@ function EventInfoBlock({
         </p>
       )}
 
-      {/* Heads-up so the gate isn't a surprise at checkout. The server still
-          enforces it — this is only a warning, and it's pointless once they
+      {/* Heads-up so the gate isn't a surprise. The server still enforces the
+          handles — this is only a warning, and it's pointless once they
           already hold a ticket. */}
-      {!userHasTicket && requiredHandles.length > 0 && (
+      {!userHasTicket && (requiredHandles.length > 0 || hasForm) && (
         <p className="mt-2 font-body text-[13px] text-cirkle-text-muted">
-          Requires your {requiredHandles.map((p) => PLATFORM_LABELS[p]).join(' and ')} to attend.
+          {requirementNote(requiredHandles, hasForm, eventType)}
         </p>
       )}
     </div>
@@ -573,14 +592,12 @@ export function EventDetail() {
   const [loadError, setLoadError] = useState('')
   const [isRequestingInvite, setIsRequestingInvite] = useState(false)
   const fetchProfile = useProfileStore((s) => s.fetchProfile)
-  // Non-null while the gate dialog is open: { missing, withForm }. `missing`
-  // may be empty — the organizer's Google Form alone can open the gate with
-  // no handles to collect — and `withForm` says whether to show the form
-  // section (decided in the handler, so render never reads the ref below).
+  // Non-null while the gate dialog is open: { missing, withForm, intent }.
+  // `missing` may be empty — the organizer's Google Form alone can open the
+  // gate with no handles to collect; `withForm` says whether to show the form
+  // section; `intent` is the action to resume once the user gets through:
+  // 'invite' (request an invitation) or 'buy' (go pick a ticket).
   const [gate, setGate] = useState(null)
-  // The user's word that they filled the organizer's form, once per visit —
-  // a ref so the retry inside onSaved sees it immediately.
-  const formConfirmedRef = useRef(false)
   // Who's Going preview — fetched separately from the event itself.
   const [attendees, setAttendees] = useState([])
   const [attendeeTotal, setAttendeeTotal] = useState(0)
@@ -635,11 +652,7 @@ export function EventDetail() {
 
   // Flags are only present on the detail response, so the cached list object
   // yields an empty list until the fetch lands.
-  const requiredHandles = [
-    event?.requireFacebook && 'facebook',
-    event?.requireInstagram && 'instagram',
-    event?.requireLinkedin && 'linkedin',
-  ].filter(Boolean)
+  const requiredHandles = requiredHandlesFor(event)
 
   // Merge a field into the currently-shown event (keeps SWR fetched copy authoritative).
   const patchEvent = (fields) => setFetchedEvent((prev) => ({ ...(prev ?? cachedEvent), ...fields }))
@@ -653,13 +666,11 @@ export function EventDetail() {
       // server's gate, so the user isn't asked for ones they already have)
       // plus the Google Form, if any. The server's 403 below stays as the
       // authoritative fallback should the cached profile be stale.
-      const needsForm = Boolean(event?.googleFormUrl) && !formConfirmedRef.current
+      const needsForm = formNeededFor(event, 'invite')
       const profile = requiredHandles.length > 0 ? await fetchProfile() : null
-      const missing = requiredHandles.filter(
-        (p) => typeof profile?.[p] !== 'string' || profile[p].trim() === '',
-      )
+      const missing = missingHandles(event, profile)
       if (missing.length > 0 || needsForm) {
-        setGate({ missing, withForm: needsForm })
+        setGate({ missing, withForm: needsForm, intent: 'invite' })
         return
       }
 
@@ -672,7 +683,7 @@ export function EventDetail() {
       // The form was confirmed on the way here, so this reopen is handles-only.
       const missing = err instanceof ApiError ? socialGateMissing(err) : null
       if (missing) {
-        setGate({ missing, withForm: false })
+        setGate({ missing, withForm: false, intent: 'invite' })
         return
       }
       // 409 means a row already exists — resync the real status from the server.
@@ -687,6 +698,22 @@ export function EventDetail() {
     } finally {
       setIsRequestingInvite(false)
     }
+  }
+
+  // The same gate, ahead of the ticket picker: nobody should choose a
+  // category and reach "Pay" only to be told they can't buy. On open events
+  // this is where the organizer's form is collected; on invite-only events
+  // it was collected with the request, so only handles are checked here.
+  // Checkout keeps the server's 403 as the authoritative fallback.
+  const handleChooseTicket = async () => {
+    const needsForm = formNeededFor(event, 'buy')
+    const profile = requiredHandles.length > 0 ? await fetchProfile() : null
+    const missing = missingHandles(event, profile)
+    if (missing.length > 0 || needsForm) {
+      setGate({ missing, withForm: needsForm, intent: 'buy' })
+      return
+    }
+    navigate(`/events/${event.id}/tickets`)
   }
 
   return (
@@ -712,13 +739,14 @@ export function EventDetail() {
               price={entryPrice(event)}
               organizerInstagram={event.organizerInstagram}
               requiredHandles={requiredHandles}
+              hasForm={Boolean(event.googleFormUrl)}
               userHasTicket={event.userHasTicket}
               eventType={event.eventType}
               invitationStatus={event.invitationStatus}
               isRequestingInvite={isRequestingInvite}
               ticketCategories={event.ticketCategories ?? []}
               soldOut={event.soldOut}
-              onChooseTicket={() => navigate(`/events/${event.id}/tickets`)}
+              onChooseTicket={handleChooseTicket}
               onViewTicket={() => navigate('/tickets')}
               onRequestInvite={handleRequestInvite}
             />
@@ -746,13 +774,16 @@ export function EventDetail() {
         <SocialHandlesDialog
           missing={gate.missing}
           googleFormUrl={gate.withForm ? (event?.googleFormUrl ?? null) : null}
-          // Cancel abandons the request — the gate runs before the invitation
-          // row is created, so nothing was written.
+          context={gate.intent === 'buy' ? 'purchase' : 'invite'}
+          // Cancel abandons the action — the gate runs before anything is
+          // written, so there is nothing to undo.
           onCancel={() => setGate(null)}
           onSaved={async () => {
-            formConfirmedRef.current = true
+            const { intent, withForm } = gate
+            if (withForm) markFormConfirmed(event.id)
             setGate(null)
-            await handleRequestInvite()
+            if (intent === 'buy') await handleChooseTicket()
+            else await handleRequestInvite()
           }}
         />
       )}

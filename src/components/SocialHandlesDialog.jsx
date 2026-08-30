@@ -14,15 +14,26 @@ function labelList(platforms) {
 }
 
 /**
- * The just-in-time gate. Shown when buying or requesting an invitation returns
+ * The just-in-time gate. Opened proactively before buying or requesting an
+ * invitation (see lib/eventGate.js), and again if the server answers
  * 403 social_handles_required.
  *
  * Collects only the handles named in `missing` — never re-asks for ones the
  * user already has. There is deliberately no "skip": on success it calls
  * `onSaved`, which retries the action that was blocked. Cancelling abandons
  * that action entirely.
+ *
+ * `context` only changes the form's explanatory copy: 'invite' when the
+ * organizer reviews answers before accepting a request, 'purchase' when the
+ * form simply has to be filled before buying.
  */
-export function SocialHandlesDialog({ missing, googleFormUrl = null, onCancel, onSaved }) {
+export function SocialHandlesDialog({
+  missing,
+  googleFormUrl = null,
+  context = 'invite',
+  onCancel,
+  onSaved,
+}) {
   const applyProfileUpdate = useProfileStore((s) => s.applyUpdate)
 
   const [values, setValues] = useState(() =>
@@ -141,8 +152,9 @@ export function SocialHandlesDialog({ missing, googleFormUrl = null, onCancel, o
           {googleFormUrl && (
             <div className={missing.length > 0 ? 'mt-6' : ''}>
               <p className="font-body text-[14px] text-cirkle-text-muted leading-relaxed">
-                The organizer has a few extra questions for this event. Fill out
-                their form — they review answers before accepting requests.
+                {context === 'purchase'
+                  ? 'The organizer has a few questions for everyone attending. Fill out their form before you buy — they see your answers in Google Forms.'
+                  : 'The organizer has a few extra questions for this event. Fill out their form — they review answers before accepting requests.'}
               </p>
               <a
                 href={googleFormUrl}

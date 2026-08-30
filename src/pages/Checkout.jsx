@@ -4,7 +4,7 @@ import { ArrowLeft, Ticket, Loader2 } from 'lucide-react'
 import { api, ApiError } from '../lib/api.js'
 import { useEventsStore, selectEventById } from '../store/eventsStore.js'
 import { useProfileStore } from '../store/profileStore.js'
-import { formatPrice, formatEventDateTime } from '../lib/format.js'
+import { formatEventDateTime } from '../lib/format.js'
 import {
   estimateBreakdown,
   validateCoupon,
@@ -14,6 +14,12 @@ import {
   openRazorpayCheckout,
 } from '../lib/payment.js'
 import { socialGateMissing } from '../lib/socialHandles.js'
+import {
+  requiredHandlesFor,
+  missingHandles,
+  formNeededFor,
+  markFormConfirmed,
+} from '../lib/eventGate.js'
 import SocialHandlesDialog from '../components/SocialHandlesDialog.jsx'
 import HoldCountdown from '../components/HoldCountdown.jsx'
 
@@ -58,9 +64,10 @@ export function Checkout() {
   // idle | creating | awaiting | verifying | polling | pending
   const [phase, setPhase] = useState('idle')
   const [payError, setPayError] = useState('')
-  // Non-null when the purchase was blocked by the social-handle gate: the exact
-  // handles the server says are missing.
-  const [gateMissing, setGateMissing] = useState(null)
+  // Non-null while the requirements dialog is open: { missing, withForm } —
+  // the handles to collect (from the profile, or the exact list the server
+  // said was missing) and whether the organizer's form must be shown too.
+  const [gate, setGate] = useState(null)
   const [cancelled, setCancelled] = useState(false)
   const [alreadyHasTicket, setAlreadyHasTicket] = useState(false)
   // The chosen category sold out (or was withdrawn) between picking and paying.
@@ -143,6 +150,20 @@ export function Checkout() {
     setPayError('')
     setCancelled(false)
     setAlreadyHasTicket(false)
+
+    // The event page runs this same gate before the ticket picker, so this
+    // normally passes silently. It exists for a buyer who arrived without
+    // going through it (stale cache, a restored tab) — nobody reaches
+    // Razorpay owing the organizer a handle or their form. The server's 403
+    // below remains the authoritative check for handles.
+    const needsForm = formNeededFor(event, 'buy')
+    const gateProfile = requiredHandlesFor(event).length > 0 ? await fetchProfile() : profile
+    const missingNow = missingHandles(event, gateProfile)
+    if (missingNow.length > 0 || needsForm) {
+      setGate({ missing: missingNow, withForm: needsForm })
+      return
+    }
+
     setPhase('creating')
 
     let order
@@ -155,7 +176,7 @@ export function Checkout() {
       // handling below.
       const missing = err instanceof ApiError ? socialGateMissing(err) : null
       if (missing) {
-        setGateMissing(missing)
+        setGate({ missing, withForm: false })
         return
       }
       const msg = err instanceof ApiError ? err.message : 'Could not start payment. Please try again.'
@@ -521,13 +542,16 @@ export function Checkout() {
         )}
       </div>
 
-      {gateMissing && (
+      {gate && (
         <SocialHandlesDialog
-          missing={gateMissing}
+          missing={gate.missing}
+          googleFormUrl={gate.withForm ? (event?.googleFormUrl ?? null) : null}
+          context="purchase"
           // Cancel abandons the purchase — no order was created.
-          onCancel={() => setGateMissing(null)}
+          onCancel={() => setGate(null)}
           onSaved={async () => {
-            setGateMissing(null)
+            if (gate.withForm) markFormConfirmed(eventId)
+            setGate(null)
             await handlePay() // the gate now passes; resumes the normal flow
           }}
         />
