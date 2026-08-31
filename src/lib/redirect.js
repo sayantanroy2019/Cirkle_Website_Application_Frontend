@@ -56,6 +56,25 @@ export function consumeRedirect() {
   }
 }
 
+/**
+ * Latest write wins — for DELIBERATE intent, not the logged-out capture.
+ *
+ * rememberRedirect's first-write-wins is right when two route guards fire in
+ * a row during one logged-out visit. It is wrong for the deferred-onboarding
+ * entry points: tapping "Create profile" on the Vibes tab and later "Buy
+ * ticket" on an event are two separate declarations of intent, and the most
+ * recent one is where the user must land — an abandoned earlier attempt
+ * must not pin every later completion to its stale destination.
+ */
+export function setRedirect(path) {
+  if (!isSafeInternalPath(path)) return
+  try {
+    sessionStorage.setItem(KEY, path)
+  } catch {
+    /* private mode / storage disabled — completion degrades to landing on Home */
+  }
+}
+
 export function clearRedirect() {
   try {
     sessionStorage.removeItem(KEY)

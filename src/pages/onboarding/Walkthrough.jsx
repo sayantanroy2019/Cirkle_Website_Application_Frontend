@@ -177,8 +177,13 @@ export function Walkthrough() {
 
   // Guard: if already dismissed (e.g. manual nav or refresh after finishing),
   // don't show it again — go straight to the Feed.
+  // Guard against a double-consume: finish() flips walkthroughSeen, which
+  // re-runs this effect while finish's own navigation is still in flight —
+  // the second consumeRedirect() would find nothing and override the real
+  // destination with /feed. The ref marks "finish is handling it".
+  const finishingRef = useRef(false)
   useEffect(() => {
-    if (walkthroughSeen) {
+    if (walkthroughSeen && !finishingRef.current) {
       markHistoryFloor()
       navigate(consumeRedirect() ?? '/feed', { replace: true })
     }
@@ -200,6 +205,7 @@ export function Walkthrough() {
   // The far side of onboarding — where a new user who arrived by deep link
   // finally gets the destination they were sent for.
   const finish = () => {
+    finishingRef.current = true
     markWalkthroughSeen()
     // The onboarding steps behind this entry are finished business: mark this
     // landing as the floor so in-app "back" never steps into them.
