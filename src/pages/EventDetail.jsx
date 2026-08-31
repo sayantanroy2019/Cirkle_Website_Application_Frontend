@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 // Upload, Bookmark, Share2, MoreHorizontal are commented out along with the
 // share/save/more buttons below — add them back here when those are implemented.
-import { ArrowLeft, MapPin, CalendarDays, FileText } from 'lucide-react'
+import { ArrowLeft, MapPin, CalendarDays, FileText, Share2, Check } from 'lucide-react'
 import { api, ApiError } from '../lib/api.js'
 import { useEventsStore, selectEventById } from '../store/eventsStore.js'
 import { useProfileStore } from '../store/profileStore.js'
@@ -21,6 +21,8 @@ import {
   markFormConfirmed,
 } from '../lib/eventGate.js'
 import { useBackOr } from '../lib/navigation.js'
+import { useGateStore } from '../store/gateStore.js'
+import CompleteProfileDialog from '../components/CompleteProfileDialog.jsx'
 
 // Only the first few attendees are needed for the avatar row — "See All" opens
 // the paginated list. `total` from the response drives the count and +N badge.
@@ -52,7 +54,27 @@ const MOCK_GROUPS = [
 */
 
 // ─── Header ───────────────────────────────────────────────────────────────────
-function EventDetailHeader({ onBack }) {
+function EventDetailHeader({ onBack, shareUrl, shareTitle }) {
+  const [copied, setCopied] = useState(false)
+
+  // The event page IS the shareable thing: the link is an entry point into
+  // the app (login → city → this page, via the stored redirect). Native
+  // share sheet where the platform has one; clipboard with a beat of
+  // feedback everywhere else.
+  const handleShare = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: shareTitle, url: shareUrl })
+        return
+      }
+      await navigator.clipboard.writeText(shareUrl)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      /* user dismissed the sheet, or clipboard denied — nothing to do */
+    }
+  }
+
   return (
     <header className="flex-none bg-cirkle-black flex items-center justify-between px-4 h-14">
       <button
@@ -68,17 +90,18 @@ function EventDetailHeader({ onBack }) {
         Event Details
       </h1>
 
-      {/* Share / save — hidden until they do something. Restore with the
-          Upload and Bookmark imports at the top of this file.
-      <div className="flex items-center gap-3">
-        <button type="button" className="w-9 h-9 flex items-center justify-center text-white transition-opacity duration-200 hover:opacity-70">
-          <Upload size={20} strokeWidth={2} />
-        </button>
-        <button type="button" className="w-9 h-9 flex items-center justify-center text-white transition-opacity duration-200 hover:opacity-70">
-          <Bookmark size={20} strokeWidth={2} />
-        </button>
-      </div>
-      */}
+      <button
+        type="button"
+        onClick={handleShare}
+        className="w-9 h-9 flex items-center justify-center text-white transition-opacity duration-200 hover:opacity-70"
+        aria-label={copied ? 'Link copied' : 'Share event'}
+      >
+        {copied ? (
+          <Check size={20} strokeWidth={2.5} className="text-cirkle-yellow" />
+        ) : (
+          <Share2 size={20} strokeWidth={2} />
+        )}
+      </button>
     </header>
   )
 }
@@ -207,6 +230,13 @@ const INVITE_NOTE = {
   pending: 'Request sent. Waiting for the organizer to approve your access.',
   rejected: "The organizer didn't approve access to this event.",
   accepted: "You're approved — you can buy your ticket.",
+}
+
+// Why the complete-profile dialog opened, in the user's terms.
+const PROFILE_GATE_MESSAGES = {
+  buy: 'Tickets on Cirkle belong to member profiles — the people you meet see who you are. Complete yours to book.',
+  invite: 'The organizer reviews profiles before accepting invites. Complete yours to request one.',
+  people: "People on Cirkle only appear to members they can also see. Complete your profile to see who's going.",
 }
 
 // Heads-up copy so the gate isn't a surprise. Names the action the organizer's
@@ -466,10 +496,39 @@ function attendeeSummary(people, total) {
   return `${list} and ${others} other${others === 1 ? '' : 's'}`
 }
 
-function EventWhosGoing({ people, total, onSeeAll, onSelect }) {
+function EventWhosGoing({ people, total, profileRequired, onCreateProfile, onSeeAll, onSelect }) {
   const visible = people.slice(0, 4)
   const overflow = total - visible.length
   const summary = attendeeSummary(people, total)
+
+  // Deferred onboarding: the count stays (social proof), the people appear
+  // only to members — same reciprocity rule as the Vibes feed.
+  if (profileRequired) {
+    return (
+      <section className="bg-cirkle-black px-4 pt-5 pb-4">
+        <h3 className="font-body text-[20px] font-bold text-white mb-1">Who's Going</h3>
+        <p className="font-body text-[13px] font-normal text-cirkle-text-muted mb-3">
+          {total === 0 ? 'Nobody has booked yet' : `${total} attending`}
+        </p>
+        {total > 0 && (
+          <div className="rounded-[14px] bg-cirkle-card border border-cirkle-border-card p-4">
+            <p className="font-body text-[14px] text-cirkle-text-light leading-relaxed">
+              Create your profile to see who's going — people on Cirkle only
+              appear to members they can also see.
+            </p>
+            <button
+              type="button"
+              onClick={onCreateProfile}
+              className="btn-primary px-6 py-2.5 mt-3 text-[14px]"
+            >
+              Create profile
+            </button>
+          </div>
+        )}
+        <hr className="border-cirkle-border mt-5" />
+      </section>
+    )
+  }
 
   return (
     <section className="bg-cirkle-black px-4 pt-5 pb-4">
@@ -583,6 +642,8 @@ function EventFindYourTribe({ groups }) {
 export function EventDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const resumeIntent = searchParams.get('resume')
   // A shared link opens this page as the first entry in a fresh tab; back
   // then lands on the feed instead of leaving the app.
   const goBack = useBackOr('/feed')
@@ -602,9 +663,15 @@ export function EventDetail() {
   // section; `intent` is the action to resume once the user gets through:
   // 'invite' (request an invitation) or 'buy' (go pick a ticket).
   const [gate, setGate] = useState(null)
+  // Non-null while the complete-profile dialog is open: { intent }. The
+  // deferred-onboarding gate — runs BEFORE the requirements gate above.
+  const [profileGate, setProfileGate] = useState(null)
   // Who's Going preview — fetched separately from the event itself.
   const [attendees, setAttendees] = useState([])
   const [attendeeTotal, setAttendeeTotal] = useState(0)
+  // Deferred onboarding: the server keeps the count but hides the people
+  // from an incomplete profile.
+  const [attendeesGated, setAttendeesGated] = useState(false)
   const [selectedPerson, setSelectedPerson] = useState(null)
 
   const event = fetchedEvent ?? cachedEvent
@@ -639,6 +706,7 @@ export function EventDetail() {
         if (!active) return
         setAttendees(res.data)
         setAttendeeTotal(res.total)
+        setAttendeesGated(Boolean(res.profileRequired))
       })
       .catch(() => {
         /* section renders empty */
@@ -665,6 +733,15 @@ export function EventDetail() {
     if (isRequestingInvite) return
     setIsRequestingInvite(true)
     try {
+      // Deferred-onboarding gate first: the organizer decides by looking at
+      // a profile, so there must be one to look at. The server 403s
+      // (profile_incomplete) regardless — this just asks nicely first.
+      const { profileComplete } = await useGateStore.getState().ensureKnown()
+      if (!profileComplete) {
+        setProfileGate({ intent: 'invite' })
+        return
+      }
+
       // Everything the organizer asks for is collected in ONE dialog, before
       // the request is sent: the handles the profile lacks (mirroring the
       // server's gate, so the user isn't asked for ones they already have)
@@ -685,6 +762,11 @@ export function EventDetail() {
       // nothing was written — collect the handles and retry. Branching on the
       // response code leaves the invite-only 403 to its existing handling.
       // The form was confirmed on the way here, so this reopen is handles-only.
+      // Authoritative fallback for a stale gate store — nothing was written.
+      if (err instanceof ApiError && err.code === 'profile_incomplete') {
+        setProfileGate({ intent: 'invite' })
+        return
+      }
       const missing = err instanceof ApiError ? socialGateMissing(err) : null
       if (missing) {
         setGate({ missing, withForm: false, intent: 'invite' })
@@ -710,6 +792,12 @@ export function EventDetail() {
   // it was collected with the request, so only handles are checked here.
   // Checkout keeps the server's 403 as the authoritative fallback.
   const handleChooseTicket = async () => {
+    // Deferred-onboarding gate first — tickets belong to member profiles.
+    const { profileComplete } = await useGateStore.getState().ensureKnown()
+    if (!profileComplete) {
+      setProfileGate({ intent: 'buy' })
+      return
+    }
     const needsForm = formNeededFor(event, 'buy')
     const profile = requiredHandles.length > 0 ? await fetchProfile() : null
     const missing = missingHandles(event, profile)
@@ -720,9 +808,31 @@ export function EventDetail() {
     navigate(`/events/${event.id}/tickets`)
   }
 
+  // Auto-resume (deferred onboarding): finishing the profile steps returns
+  // here with ?resume=invite|buy, and the action continues by itself — the
+  // user declared intent once. Waits for the FETCHED event (the cached list
+  // copy lacks the requirement flags this gate needs), consumes the param so
+  // a refresh doesn't re-fire, then runs the same handler the tap would.
+  useEffect(() => {
+    if (!fetchedEvent || !resumeIntent) return
+    // Deferred a tick: consuming the param navigates (replace), which must
+    // not happen synchronously inside the effect body.
+    const t = setTimeout(() => {
+      setSearchParams({}, { replace: true })
+      if (resumeIntent === 'invite') handleRequestInvite()
+      else if (resumeIntent === 'buy') handleChooseTicket()
+    }, 0)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchedEvent, resumeIntent])
+
   return (
     <div className="bg-cirkle-black h-[100dvh] flex flex-col overflow-hidden">
-      <EventDetailHeader onBack={goBack} />
+      <EventDetailHeader
+        onBack={goBack}
+        shareUrl={`${window.location.origin}/events/${id}`}
+        shareTitle={event?.name ?? 'Cirkle event'}
+      />
 
       <main className="flex-1 min-h-0 overflow-y-auto">
         {isLoading && (
@@ -762,6 +872,8 @@ export function EventDetail() {
             <EventWhosGoing
               people={attendees}
               total={attendeeTotal}
+              profileRequired={attendeesGated}
+              onCreateProfile={() => setProfileGate({ intent: 'people' })}
               onSeeAll={() => navigate(`/events/${id}/attendees`)}
               onSelect={setSelectedPerson}
             />
@@ -772,6 +884,20 @@ export function EventDetail() {
 
       {selectedPerson && (
         <AttendeeProfileSheet person={selectedPerson} onClose={() => setSelectedPerson(null)} />
+      )}
+
+      {profileGate && (
+        <CompleteProfileDialog
+          message={PROFILE_GATE_MESSAGES[profileGate.intent]}
+          // 'people' has no action to resume — seeing the roster is the
+          // reward itself, so the return is the plain event page.
+          returnTo={
+            profileGate.intent === 'people'
+              ? `/events/${id}`
+              : `/events/${id}?resume=${profileGate.intent}`
+          }
+          onCancel={() => setProfileGate(null)}
+        />
       )}
 
       {gate && (

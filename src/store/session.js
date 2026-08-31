@@ -3,6 +3,8 @@ import { useCityStore } from './cityStore.js'
 import { useEventsStore } from './eventsStore.js'
 import { useVibesStore } from './vibesStore.js'
 import { useOnboarding } from './onboardingStore.js'
+import { useGateStore } from './gateStore.js'
+import { clearCompletionReturn } from '../lib/redirect.js'
 import { clearCachedTickets } from '../lib/ticketCache.js'
 
 // Clear every per-user cache so switching accounts never shows stale data
@@ -13,5 +15,10 @@ export function resetUserStores() {
   useEventsStore.getState().reset()
   useVibesStore.getState().reset()
   useOnboarding.getState().resetProfile()
+  useGateStore.getState().reset()
+  // An abandoned profile-completion's return destination must never cross
+  // into another account's session (the login deep-link redirect is separate
+  // and deliberately survives login).
+  clearCompletionReturn()
   clearCachedTickets() // a cached QR must never outlive its owner's session
 }

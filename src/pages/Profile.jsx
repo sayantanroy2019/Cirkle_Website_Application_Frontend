@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronRight, Pencil, Eye, CalendarDays } from 'lucide-react'
 import { useAuthStore } from '../store/authStore.js'
 import { useProfileStore } from '../store/profileStore.js'
+import { useGateStore } from '../store/gateStore.js'
+import { useStartProfileCompletion } from '../lib/profileCompletion.js'
 import { resetUserStores } from '../store/session.js'
 import { clearRedirect } from '../lib/redirect.js'
 import {
@@ -191,6 +193,15 @@ export function Profile() {
     fetchProfile()
   }, [fetchProfile])
 
+  // Deferred onboarding: a Browser (phone + city only) sees a completion
+  // card instead of the edit button — the edit screen assumes a profile.
+  const profileComplete = useGateStore((s) => s.profileComplete)
+  const ensureKnown = useGateStore((s) => s.ensureKnown)
+  const startCompletion = useStartProfileCompletion()
+  useEffect(() => {
+    ensureKnown()
+  }, [ensureKnown])
+
   const handleLogout = () => {
     clearToken()
     resetUserStores()
@@ -221,15 +232,33 @@ export function Profile() {
         {profile ? <ProfilePreviewCard profile={profile} /> : <PreviewSkeleton />}
       </div>
 
-      {/* Edit profile — sits with the card, since editing changes what's above */}
-      <button
-        type="button"
-        onClick={() => navigate('/profile/edit')}
-        className="btn-primary w-full px-8 py-3.5 mt-4"
-      >
-        <Pencil size={16} strokeWidth={2.5} className="mr-2" />
-        Edit profile
-      </button>
+      {/* Edit profile — sits with the card, since editing changes what's
+          above. A Browser gets the completion card instead: there is nothing
+          to edit yet, and this is their standing way back into the steps. */}
+      {profileComplete === false ? (
+        <div className="mt-4 rounded-[14px] border border-cirkle-yellow/40 bg-cirkle-chip p-4">
+          <p className="font-body text-[15px] font-bold text-white">Your profile isn’t live yet</p>
+          <p className="mt-1 font-body text-[13.5px] text-cirkle-text-muted leading-relaxed">
+            Complete it to appear in Vibes, request invites and book tickets.
+          </p>
+          <button
+            type="button"
+            onClick={() => startCompletion('/profile')}
+            className="btn-primary w-full px-8 py-3 mt-3"
+          >
+            Complete profile
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => navigate('/profile/edit')}
+          className="btn-primary w-full px-8 py-3.5 mt-4"
+        >
+          <Pencil size={16} strokeWidth={2.5} className="mr-2" />
+          Edit profile
+        </button>
+      )}
 
       <SettingsSection title="Help and support" rows={HELP_ROWS} onRow={handleRow} />
       <SettingsSection title="Legal" rows={LEGAL_ROWS} onRow={handleRow} />

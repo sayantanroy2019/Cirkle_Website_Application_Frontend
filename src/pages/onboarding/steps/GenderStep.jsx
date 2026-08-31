@@ -32,7 +32,8 @@ export function GenderStep() {
     try {
       await api.patch('/onboarding/step/3', { gender })
       updateProfile({ gender })
-      navigate('/onboarding/city')
+      // City was collected at sign-up (deferred onboarding) — skip its step.
+      navigate('/onboarding/tags')
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Something went wrong. Please try again.'
       setApiError(message)

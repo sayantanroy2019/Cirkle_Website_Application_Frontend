@@ -4,6 +4,7 @@ import { ArrowLeft, ChevronRight } from 'lucide-react'
 import { api, ApiError } from '../lib/api.js'
 import PersonAvatar from '../components/PersonAvatar.jsx'
 import AttendeeProfileSheet from '../components/AttendeeProfileSheet.jsx'
+import CreateProfilePrompt from '../components/CreateProfilePrompt.jsx'
 import { useBackOr } from '../lib/navigation.js'
 
 const PAGE_SIZE = 50
@@ -20,6 +21,9 @@ export function EventAttendees() {
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [loadError, setLoadError] = useState('')
   const [selected, setSelected] = useState(null)
+  // Deferred onboarding: the server keeps the count but hides the people
+  // from an incomplete profile — this flags the create-profile prompt.
+  const [profileRequired, setProfileRequired] = useState(false)
 
   // Each row already carries the full profile card, so opening one costs no request.
   const loadPage = useCallback(
@@ -28,6 +32,7 @@ export function EventAttendees() {
         params: { limit: PAGE_SIZE, offset: nextOffset },
       })
       setTotal(res.total)
+      setProfileRequired(Boolean(res.profileRequired))
       setOffset(nextOffset + res.data.length)
       setAttendees((prev) => (nextOffset === 0 ? res.data : [...prev, ...res.data]))
     },
@@ -68,7 +73,7 @@ export function EventAttendees() {
 
   // The server may return fewer rows than `total` — a ticket-holder who never
   // finished onboarding is filtered out — so trust the array, not the count.
-  const hasMore = attendees.length < total && !loadError
+  const hasMore = attendees.length < total && !loadError && !profileRequired
 
   return (
     <div className="min-h-[100dvh] bg-cirkle-black">
@@ -103,6 +108,17 @@ export function EventAttendees() {
           <p className="font-body text-[13px] text-cirkle-text-muted mb-3">
             {total} {total === 1 ? 'person' : 'people'} going
           </p>
+        )}
+
+        {/* The count above stays (social proof); the people appear only to
+            members — same reciprocity rule as the Vibes feed. */}
+        {profileRequired && !isLoading && (
+          <div className="mt-8">
+            <CreateProfilePrompt
+              title="See who's going"
+              message="People on Cirkle only appear to members who can also be seen. Create your profile to meet them."
+            />
+          </div>
         )}
 
         <ul className="flex flex-col gap-2">

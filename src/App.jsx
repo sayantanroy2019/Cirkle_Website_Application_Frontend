@@ -2,6 +2,7 @@ import { Routes, Route, Outlet } from 'react-router-dom'
 import Landing from './pages/onboarding/Landing.jsx'
 import PhoneEntry from './pages/onboarding/PhoneEntry.jsx'
 import OtpVerification from './pages/onboarding/OtpVerification.jsx'
+import SignupCity from './pages/onboarding/SignupCity.jsx'
 import OnboardingIntro from './pages/onboarding/OnboardingIntro.jsx'
 import OnboardingVibe from './pages/onboarding/OnboardingVibe.jsx'
 import NameStep from './pages/onboarding/steps/NameStep.jsx'
@@ -36,6 +37,17 @@ function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/phone" element={<PhoneEntry />} />
       <Route path="/otp" element={<OtpVerification />} />
+      {/* Sign-up's only screen beyond the phone (deferred onboarding): pick a
+          city, land on the feed. capture={false} — a remembered URL is
+          consumed by this screen itself, not re-captured. */}
+      <Route
+        path="/signup/city"
+        element={
+          <RequireAuth capture={false}>
+            <SignupCity />
+          </RequireAuth>
+        }
+      />
       {/* Authenticated, but capture={false}: the resume point comes from the
           verify response, so a remembered onboarding URL would only mislead. */}
       <Route path="/onboarding" element={<RequireAuth capture={false}><Outlet /></RequireAuth>}>

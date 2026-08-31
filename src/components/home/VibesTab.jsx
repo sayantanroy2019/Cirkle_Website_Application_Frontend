@@ -4,6 +4,8 @@ import { useSpring, animated } from '@react-spring/web'
 import { useDrag } from '@use-gesture/react'
 import { Sparkles, Music2, Martini, Plane, Users, CalendarDays, MapPin } from 'lucide-react'
 import { useVibesStore } from '../../store/vibesStore.js'
+import { useGateStore } from '../../store/gateStore.js'
+import CreateProfilePrompt from '../CreateProfilePrompt.jsx'
 import { formatEventDay } from '../../lib/format.js'
 
 const CATEGORY_ICON = {
@@ -185,9 +187,16 @@ export function VibesTab() {
   const hasPrev = clampedIndex > 0
   const hasNext = clampedIndex < cardsLen - 1
 
+  // The feed is reciprocal — you see people only once you can be seen. Only
+  // fetch once the profile is known complete; a Browser gets the prompt.
+  const profileComplete = useGateStore((s) => s.profileComplete)
+  const ensureKnown = useGateStore((s) => s.ensureKnown)
   useEffect(() => {
-    fetchVibes()
-  }, [fetchVibes])
+    ensureKnown()
+  }, [ensureKnown])
+  useEffect(() => {
+    if (profileComplete === true) fetchVibes()
+  }, [profileComplete, fetchVibes])
 
   // New person → reset photo + scroll to top, and pop the fresh card in.
   useEffect(() => {
@@ -223,6 +232,14 @@ export function VibesTab() {
     { axis: 'x', filterTaps: true, pointer: { touch: true } },
   )
 
+  if (profileComplete === false) {
+    return (
+      <CreateProfilePrompt
+        message="Create your profile to see who’s going where."
+        returnTo="/feed"
+      />
+    )
+  }
   if (error && !cards) {
     return <p className="h-full flex items-center justify-center px-6 font-body text-[14px] text-red-400">{error}</p>
   }
