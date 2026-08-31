@@ -4,7 +4,10 @@ const STEP_ROUTES = [
   '/onboarding/intro',
   '/onboarding/dob',
   '/onboarding/gender',
-  '/onboarding/city',
+  // City was collected at sign-up (deferred onboarding), so the profile flow
+  // skips it: completing gender resumes at tags. Legacy users who finished
+  // the old city step (counter 4) land on the same tags route below.
+  '/onboarding/tags',
   '/onboarding/tags',
   // Step 5 opens with the photo-motivation interstitial, which leads into the
   // upload itself. Resuming here shows it too — someone who abandoned at

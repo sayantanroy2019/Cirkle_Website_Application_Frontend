@@ -8,7 +8,7 @@ import { mapOtpError } from '../../lib/otpErrors.js'
 import { consumeRedirect } from '../../lib/redirect.js'
 import { markHistoryFloor } from '../../lib/navigation.js'
 import { formatPhoneForDisplay } from '../../lib/phone.js'
-import { routeForOnboardingStep } from './onboardingRoutes.js'
+import { useGateStore } from '../../store/gateStore.js'
 
 // CROSS-LAYER COUPLING — the box count is not a free choice.
 //
@@ -84,17 +84,21 @@ export function OtpVerification() {
       resetWalkthrough() // a fresh onboarding should see the walkthrough again
       setToken(data.token)
 
-      // A deep link is only claimed once the user is actually through
-      // onboarding. Someone mid-flow keeps their stored destination — the
-      // walkthrough consumes it on the far side, so a new user still reaches
-      // the ticket instead of losing it to the onboarding detour.
-      const next = routeForOnboardingStep(data)
-      const landing = next === '/feed'
-      // Landing an onboarded user: nothing before this entry is "back" —
-      // the login screens were replaces. A new user's floor is set by the
-      // walkthrough instead, once onboarding is behind them.
-      if (landing) markHistoryFloor()
-      navigate(landing ? (consumeRedirect() ?? '/feed') : next, { replace: true })
+      useGateStore.getState().setFromLogin(data)
+
+      // Deferred onboarding: login never routes into the profile steps any
+      // more — the profile is charged at the first gated action instead.
+      // The only question here is "do we know their city?". A deep-link
+      // destination survives either path: whichever screen lands the user
+      // consumes it (the city screen for a brand-new user, here otherwise).
+      if (!data.hasCity) {
+        navigate('/signup/city', { replace: true })
+      } else {
+        // Nothing before this entry is "back" — the login screens were
+        // replaces.
+        markHistoryFloor()
+        navigate(consumeRedirect() ?? '/feed', { replace: true })
+      }
     } catch (err) {
       const mapped = err instanceof ApiError ? mapOtpError(err) : null
       setApiError(mapped?.message ?? 'Something went wrong. Please try again.')

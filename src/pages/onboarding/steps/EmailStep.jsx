@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Mail } from 'lucide-react'
 import { useOnboarding } from '../../../store/onboardingStore.js'
+import { useGateStore } from '../../../store/gateStore.js'
 import OnboardingHeader from '../components/OnboardingHeader.jsx'
 import { api, ApiError } from '../../../lib/api.js'
 
@@ -30,6 +31,9 @@ export function EmailStep() {
     try {
       await api.patch('/onboarding/step/7', { email: trimmed })
       updateProfile({ email: trimmed })
+      // step/7 flips partial_profile_complete on the server — mirror it so
+      // the gates (vibes, buy, invite) open without another status fetch.
+      useGateStore.getState().markComplete()
       navigate('/walkthrough', { replace: true })
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Something went wrong. Please try again.'
