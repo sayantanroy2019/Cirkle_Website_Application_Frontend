@@ -4,7 +4,7 @@ import { useSpring, animated } from '@react-spring/web'
 import { useDrag } from '@use-gesture/react'
 import { Music2, CalendarDays, MapPin, Ticket, ArrowRight, ChevronLeft } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
-import { consumeRedirect } from '../../lib/redirect.js'
+import { consumeRedirect, consumeCompletionReturn } from '../../lib/redirect.js'
 import { markHistoryFloor } from '../../lib/navigation.js'
 
 // Drop a licensed portrait (Unsplash/Pexels — free for commercial use) at
@@ -185,7 +185,9 @@ export function Walkthrough() {
   useEffect(() => {
     if (walkthroughSeen && !finishingRef.current) {
       markHistoryFloor()
-      navigate(consumeRedirect() ?? '/feed', { replace: true })
+      // Completion intent (the entry point that started the steps) outranks
+      // a login deep link; Home is the fallback.
+      navigate(consumeCompletionReturn() ?? consumeRedirect() ?? '/feed', { replace: true })
     }
   }, [walkthroughSeen, navigate])
 
@@ -210,7 +212,8 @@ export function Walkthrough() {
     // The onboarding steps behind this entry are finished business: mark this
     // landing as the floor so in-app "back" never steps into them.
     markHistoryFloor()
-    navigate(consumeRedirect() ?? '/feed', { replace: true })
+    // Completion intent outranks a login deep link; Home is the fallback.
+    navigate(consumeCompletionReturn() ?? consumeRedirect() ?? '/feed', { replace: true })
   }
 
   const bind = useDrag(

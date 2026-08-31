@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useGateStore } from '../store/gateStore.js'
-import { setRedirect } from './redirect.js'
+import { setCompletionReturn } from './redirect.js'
 import { routeForOnboardingStep } from '../pages/onboarding/onboardingRoutes.js'
 
 /**
@@ -19,7 +19,7 @@ export function useStartProfileCompletion() {
   const navigate = useNavigate()
   return async (returnTo) => {
     const { profileComplete, currentStep } = await useGateStore.getState().refresh()
-    setRedirect(returnTo)
+    setCompletionReturn(returnTo)
     navigate(
       routeForOnboardingStep({
         currentOnboardingStep: currentStep,

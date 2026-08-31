@@ -57,21 +57,45 @@ export function consumeRedirect() {
 }
 
 /**
- * Latest write wins — for DELIBERATE intent, not the logged-out capture.
+ * Where to land after COMPLETING the deferred profile steps — a separate key
+ * from the login redirect above, deliberately.
  *
- * rememberRedirect's first-write-wins is right when two route guards fire in
- * a row during one logged-out visit. It is wrong for the deferred-onboarding
- * entry points: tapping "Create profile" on the Vibes tab and later "Buy
- * ticket" on an event are two separate declarations of intent, and the most
- * recent one is where the user must land — an abandoned earlier attempt
- * must not pin every later completion to its stale destination.
+ * Sharing the login key caused two bugs: first-write-wins pinned every
+ * completion to a stale earlier destination, and an abandoned attempt's
+ * value leaked into the NEXT login (sessionStorage outlives the session
+ * server-side), landing a brand-new user on the dead user's return page.
+ *
+ * Rules for this key: latest write wins (each tap of an entry point is a
+ * fresh declaration of intent), consumed by the walkthrough ahead of the
+ * login redirect, and cleared on every login/logout (resetUserStores) so it
+ * can never cross accounts.
  */
-export function setRedirect(path) {
+const COMPLETION_KEY = 'cirkle-completion-return'
+
+export function setCompletionReturn(path) {
   if (!isSafeInternalPath(path)) return
   try {
-    sessionStorage.setItem(KEY, path)
+    sessionStorage.setItem(COMPLETION_KEY, path)
   } catch {
     /* private mode / storage disabled — completion degrades to landing on Home */
+  }
+}
+
+export function consumeCompletionReturn() {
+  try {
+    const value = sessionStorage.getItem(COMPLETION_KEY)
+    sessionStorage.removeItem(COMPLETION_KEY)
+    return isSafeInternalPath(value) ? value : null
+  } catch {
+    return null
+  }
+}
+
+export function clearCompletionReturn() {
+  try {
+    sessionStorage.removeItem(COMPLETION_KEY)
+  } catch {
+    /* nothing to do */
   }
 }
 
