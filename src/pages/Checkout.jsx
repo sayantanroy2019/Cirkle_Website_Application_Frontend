@@ -21,6 +21,7 @@ import {
   markFormConfirmed,
 } from '../lib/eventGate.js'
 import SocialHandlesDialog from '../components/SocialHandlesDialog.jsx'
+import CompleteProfileDialog from '../components/CompleteProfileDialog.jsx'
 import HoldCountdown from '../components/HoldCountdown.jsx'
 import { useBackOr } from '../lib/navigation.js'
 
@@ -72,6 +73,10 @@ export function Checkout() {
   // the handles to collect (from the profile, or the exact list the server
   // said was missing) and whether the organizer's form must be shown too.
   const [gate, setGate] = useState(null)
+  // Fallback only: the event page gates "Buy ticket" on profile completeness
+  // before anyone reaches checkout, so this opens only when the server's 403
+  // catches a stale client (profile_incomplete on order creation).
+  const [profileGateOpen, setProfileGateOpen] = useState(false)
   const [cancelled, setCancelled] = useState(false)
   const [alreadyHasTicket, setAlreadyHasTicket] = useState(false)
   // The chosen category sold out (or was withdrawn) between picking and paying.
@@ -178,6 +183,10 @@ export function Checkout() {
       // The social-handle gate — open the dialog instead of surfacing an error.
       // Keyed off the response code, so other 403s fall through to the generic
       // handling below.
+      if (err instanceof ApiError && err.code === 'profile_incomplete') {
+        setProfileGateOpen(true)
+        return
+      }
       const missing = err instanceof ApiError ? socialGateMissing(err) : null
       if (missing) {
         setGate({ missing, withForm: false })
@@ -545,6 +554,14 @@ export function Checkout() {
           </button>
         )}
       </div>
+
+      {profileGateOpen && (
+        <CompleteProfileDialog
+          message="Tickets on Cirkle belong to member profiles — the people you meet see who you are. Complete yours to book."
+          returnTo={`/events/${eventId}?resume=buy`}
+          onCancel={() => setProfileGateOpen(false)}
+        />
+      )}
 
       {gate && (
         <SocialHandlesDialog
