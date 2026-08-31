@@ -1,9 +1,6 @@
 import { useState } from 'react'
 import { X } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
-import { useGateStore } from '../store/gateStore.js'
-import { rememberRedirect } from '../lib/redirect.js'
-import { routeForOnboardingStep } from '../pages/onboarding/onboardingRoutes.js'
+import { useStartProfileCompletion } from '../lib/profileCompletion.js'
 
 /**
  * The modal cousin of CreateProfilePrompt, for the moment a gated ACTION is
@@ -15,22 +12,13 @@ import { routeForOnboardingStep } from '../pages/onboarding/onboardingRoutes.js'
  * the user declared intent once and is never made to re-tap.
  */
 export function CompleteProfileDialog({ message, returnTo, onCancel }) {
-  const navigate = useNavigate()
+  const startCompletion = useStartProfileCompletion()
   const [isStarting, setIsStarting] = useState(false)
 
   const start = async () => {
     if (isStarting) return
     setIsStarting(true)
-    // Refresh first: an attempt abandoned in another session resumes at the
-    // saved step, not from the beginning.
-    const { profileComplete, currentStep } = await useGateStore.getState().refresh()
-    rememberRedirect(returnTo)
-    navigate(
-      routeForOnboardingStep({
-        currentOnboardingStep: currentStep,
-        partialProfileComplete: profileComplete,
-      }),
-    )
+    await startCompletion(returnTo)
   }
 
   return (

@@ -1,9 +1,7 @@
 import { useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import { Sparkles } from 'lucide-react'
-import { useGateStore } from '../store/gateStore.js'
-import { rememberRedirect } from '../lib/redirect.js'
-import { routeForOnboardingStep } from '../pages/onboarding/onboardingRoutes.js'
+import { useStartProfileCompletion } from '../lib/profileCompletion.js'
 
 /**
  * The deferred-onboarding invitation: shown wherever a surface needs a
@@ -17,23 +15,14 @@ export function CreateProfilePrompt({
   message = 'Create your profile to see who’s going where.',
   returnTo = null,
 }) {
-  const navigate = useNavigate()
   const location = useLocation()
+  const startCompletion = useStartProfileCompletion()
   const [isStarting, setIsStarting] = useState(false)
 
   const start = async () => {
     if (isStarting) return
     setIsStarting(true)
-    // Refresh first: an attempt abandoned in another session resumes at the
-    // saved step, not from the beginning.
-    const { profileComplete, currentStep } = await useGateStore.getState().refresh()
-    rememberRedirect(returnTo ?? `${location.pathname}${location.search}`)
-    navigate(
-      routeForOnboardingStep({
-        currentOnboardingStep: currentStep,
-        partialProfileComplete: profileComplete,
-      }),
-    )
+    await startCompletion(returnTo ?? `${location.pathname}${location.search}`)
   }
 
   return (
