@@ -61,7 +61,7 @@ export function CityStep() {
 
       <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto flex flex-col max-w-[400px] w-full mx-auto pt-6">
         <h1 className="font-display text-section-lg text-white uppercase">
-          Where are you from?
+          Where do you want to attend events?
         </h1>
         <p className="mt-3 font-body text-[15px] text-cirkle-text-muted">
           This decides which events and groups you see.

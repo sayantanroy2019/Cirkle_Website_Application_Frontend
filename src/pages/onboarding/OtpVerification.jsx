@@ -196,12 +196,14 @@ export function OtpVerification() {
         <h1 className="opacity-0 animate-[fadeUp_0.5s_ease_forwards] [animation-delay:0.1s] mt-6 font-display text-[70px] leading-[0.9] tracking-[-0.01em] text-white uppercase">
           Enter the code
         </h1>
-        {/* Channel-neutral by design: today it's SMS, later WhatsApp, and this
-            copy is correct either way. */}
+        {/* Names WhatsApp deliberately (product decision, 2026-08-23): delivery
+            is via WhatsApp, and telling users which app to check beats a vague
+            "we sent a code". If the channel ever changes, this copy — and the
+            PhoneEntry line — must change with it. */}
         <p className="opacity-0 animate-[fadeUp_0.5s_ease_forwards] [animation-delay:0.2s] mt-3 font-body text-[15px] text-cirkle-text-muted">
-          {alreadySent ? 'We already sent a code to ' : 'Code sent to '}
+          {alreadySent ? 'We already sent a code on WhatsApp to ' : 'Code sent on WhatsApp to '}
           <span className="text-white font-semibold">{formatPhoneForDisplay(phone)}</span>
-          {alreadySent ? ' — check your messages.' : '.'}{' '}
+          {alreadySent ? ' — check your WhatsApp.' : '.'}{' '}
           <button
             type="button"
             onClick={() => navigate('/phone')}

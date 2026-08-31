@@ -102,7 +102,7 @@ export function PhoneEntry() {
           What's your phone number?
         </h1>
         <p className="opacity-0 animate-[fadeUp_0.5s_ease_forwards] [animation-delay:0.2s] mt-3 font-body text-[15px] text-cirkle-text-muted">
-          We'll send you a 6-digit code to sign in.
+          We'll send you a 6-digit code on WhatsApp to sign in.
         </p>
 
         <div className="opacity-0 animate-[fadeUp_0.5s_ease_forwards] [animation-delay:0.3s] mt-8">
