@@ -24,6 +24,7 @@ import SocialHandlesDialog from '../components/SocialHandlesDialog.jsx'
 import CompleteProfileDialog from '../components/CompleteProfileDialog.jsx'
 import HoldCountdown from '../components/HoldCountdown.jsx'
 import { useBackOr } from '../lib/navigation.js'
+import { getPromoCode } from '../lib/promo.js'
 
 const rupees = (paise) => `₹${(paise / 100).toLocaleString('en-IN')}`
 
@@ -60,7 +61,9 @@ export function Checkout() {
   const profile = useProfileStore((s) => s.profile)
   const fetchProfile = useProfileStore((s) => s.fetchProfile)
 
-  const [couponInput, setCouponInput] = useState('')
+  // Pre-filled with the code the event's promo popup advertised this
+  // session (if any) — the user never retypes what we just told them.
+  const [couponInput, setCouponInput] = useState(() => getPromoCode(eventId) ?? '')
   const [couponCode, setCouponCode] = useState('') // applied
   const [couponPercent, setCouponPercent] = useState(null) // % off, for display
   const [couponBreakdown, setCouponBreakdown] = useState(null)
