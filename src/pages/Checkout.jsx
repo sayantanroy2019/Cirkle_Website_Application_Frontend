@@ -128,10 +128,17 @@ export function Checkout() {
   const handleApplyCoupon = async () => {
     const code = couponInput.trim()
     if (!code || isApplying) return
+    // The preview needs the tier the charge will use. Checkout is always
+    // entered from the picker with one, but a restored tab can lose the
+    // router state — degrade with a message rather than a server 400.
+    if (!ticketCategory?.id) {
+      setCouponError('Pick your ticket again to apply a coupon.')
+      return
+    }
     setIsApplying(true)
     setCouponError('')
     try {
-      const res = await validateCoupon(code, eventId)
+      const res = await validateCoupon(code, eventId, ticketCategory.id)
       setCouponBreakdown(res.breakdown)
       setCouponCode(res.couponCode)
     } catch (err) {

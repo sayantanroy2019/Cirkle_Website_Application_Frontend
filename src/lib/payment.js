@@ -18,8 +18,10 @@ export function estimateBreakdown(basePricePaise) {
 }
 
 // Preview a coupon — returns { valid, couponCode, breakdown }. Throws ApiError.
-export function validateCoupon(code, eventId) {
-  return api.post('/coupons/validate', { code, eventId })
+// The chosen tier is required: the discount previews against that tier's
+// price, exactly as the charge will compute it.
+export function validateCoupon(code, eventId, eventTicketCategoryId) {
+  return api.post('/coupons/validate', { code, eventId, eventTicketCategoryId })
 }
 
 // Claim a hold + create (or resume) a Razorpay order. Returns OrderCreated.
