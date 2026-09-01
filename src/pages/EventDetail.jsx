@@ -833,8 +833,12 @@ export function EventDetail() {
   // Promo popup: marketing, never a wall. Once per event per session, never
   // during an auto-resume, and only from the FETCHED copy (the cached list
   // object doesn't carry it). The advertised code is remembered so checkout
-  // pre-fills it whether or not the user taps Copy. Deferred a beat so the
-  // page paints before the popup lands.
+  // pre-fills it whether or not the user taps Copy.
+  //
+  // The admin chooses how long someone is on the page before it appears
+  // (delaySeconds; floor of 400ms so the page always paints first). Seen is
+  // marked at SHOW time — leaving before the delay elapses cancels the
+  // timer, so the popup still gets its chance on the next visit.
   useEffect(() => {
     const popup = fetchedEvent?.promoPopup
     if (!popup || resumeIntent || isPromoSeen(id)) return
@@ -842,7 +846,7 @@ export function EventDetail() {
       markPromoSeen(id)
       if (popup.couponCode) rememberPromoCode(id, popup.couponCode)
       setPromoOpen(true)
-    }, 400)
+    }, Math.max((popup.delaySeconds ?? 0) * 1000, 400))
     return () => clearTimeout(t)
   }, [fetchedEvent, resumeIntent, id])
 
