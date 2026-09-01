@@ -62,6 +62,7 @@ export function Checkout() {
 
   const [couponInput, setCouponInput] = useState('')
   const [couponCode, setCouponCode] = useState('') // applied
+  const [couponPercent, setCouponPercent] = useState(null) // % off, for display
   const [couponBreakdown, setCouponBreakdown] = useState(null)
   const [couponError, setCouponError] = useState('')
   const [isApplying, setIsApplying] = useState(false)
@@ -141,6 +142,7 @@ export function Checkout() {
       const res = await validateCoupon(code, eventId, ticketCategory.id)
       setCouponBreakdown(res.breakdown)
       setCouponCode(res.couponCode)
+      setCouponPercent(res.discountPercent ?? null)
     } catch (err) {
       setCouponError(err instanceof ApiError ? err.message : 'Could not apply this coupon.')
       setCouponBreakdown(null)
@@ -152,6 +154,7 @@ export function Checkout() {
 
   const removeCoupon = () => {
     setCouponCode('')
+    setCouponPercent(null)
     setCouponBreakdown(null)
     setCouponInput('')
     setCouponError('')
@@ -364,7 +367,9 @@ export function Checkout() {
           <label className="font-body text-[13px] font-semibold text-cirkle-text-light">Have a coupon?</label>
           {couponCode ? (
             <div className="mt-1.5 flex items-center justify-between px-4 py-3 rounded-[10px] bg-cirkle-input border border-cirkle-yellow">
-              <span className="font-body text-[14px] font-bold text-white">{couponCode} applied</span>
+              <span className="font-body text-[14px] font-bold text-white">
+                {couponCode} applied{couponPercent ? ` · ${couponPercent}% off` : ''}
+              </span>
               <button
                 type="button"
                 onClick={removeCoupon}
