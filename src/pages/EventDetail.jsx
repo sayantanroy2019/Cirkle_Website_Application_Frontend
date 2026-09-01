@@ -23,6 +23,8 @@ import {
 import { useBackOr } from '../lib/navigation.js'
 import { useGateStore } from '../store/gateStore.js'
 import CompleteProfileDialog from '../components/CompleteProfileDialog.jsx'
+import PromoPopupDialog from '../components/PromoPopupDialog.jsx'
+import { isPromoSeen, markPromoSeen, rememberPromoCode } from '../lib/promo.js'
 
 // Only the first few attendees are needed for the avatar row — "See All" opens
 // the paginated list. `total` from the response drives the count and +N badge.
@@ -666,6 +668,8 @@ export function EventDetail() {
   // Non-null while the complete-profile dialog is open: { intent }. The
   // deferred-onboarding gate — runs BEFORE the requirements gate above.
   const [profileGate, setProfileGate] = useState(null)
+  // The flash-sale popup, once per event per session (lib/promo.js).
+  const [promoOpen, setPromoOpen] = useState(false)
   // Who's Going preview — fetched separately from the event itself.
   const [attendees, setAttendees] = useState([])
   const [attendeeTotal, setAttendeeTotal] = useState(0)
@@ -826,6 +830,26 @@ export function EventDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchedEvent, resumeIntent])
 
+  // Promo popup: marketing, never a wall. Once per event per session, never
+  // during an auto-resume, and only from the FETCHED copy (the cached list
+  // object doesn't carry it). The advertised code is remembered so checkout
+  // pre-fills it whether or not the user taps Copy.
+  //
+  // The admin chooses how long someone is on the page before it appears
+  // (delaySeconds; floor of 400ms so the page always paints first). Seen is
+  // marked at SHOW time — leaving before the delay elapses cancels the
+  // timer, so the popup still gets its chance on the next visit.
+  useEffect(() => {
+    const popup = fetchedEvent?.promoPopup
+    if (!popup || resumeIntent || isPromoSeen(id)) return
+    const t = setTimeout(() => {
+      markPromoSeen(id)
+      if (popup.couponCode) rememberPromoCode(id, popup.couponCode)
+      setPromoOpen(true)
+    }, Math.max((popup.delaySeconds ?? 0) * 1000, 400))
+    return () => clearTimeout(t)
+  }, [fetchedEvent, resumeIntent, id])
+
   return (
     <div className="bg-cirkle-black h-[100dvh] flex flex-col overflow-hidden">
       <EventDetailHeader
@@ -884,6 +908,10 @@ export function EventDetail() {
 
       {selectedPerson && (
         <AttendeeProfileSheet person={selectedPerson} onClose={() => setSelectedPerson(null)} />
+      )}
+
+      {promoOpen && fetchedEvent?.promoPopup && (
+        <PromoPopupDialog popup={fetchedEvent.promoPopup} onClose={() => setPromoOpen(false)} />
       )}
 
       {profileGate && (
