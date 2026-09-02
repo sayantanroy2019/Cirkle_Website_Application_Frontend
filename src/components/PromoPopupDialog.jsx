@@ -23,12 +23,15 @@ export function PromoPopupDialog({ popup, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-5"
       role="dialog"
       aria-modal="true"
       aria-labelledby="promo-popup-title"
     >
-      <div className="w-full sm:max-w-[420px] bg-cirkle-card border border-cirkle-yellow/60 rounded-t-[20px] sm:rounded-[20px] p-6">
+      {/* Centered on every screen size — unlike the gate dialogs' mobile
+          bottom-sheet, a promo must never sit under a browser toolbar with
+          its button out of reach. max-h + scroll guards small landscapes. */}
+      <div className="w-full max-w-[400px] bg-cirkle-card border border-cirkle-yellow/60 rounded-[20px] p-6 max-h-[85dvh] overflow-y-auto">
         <div className="flex items-start justify-between gap-4">
           <h2
             id="promo-popup-title"
