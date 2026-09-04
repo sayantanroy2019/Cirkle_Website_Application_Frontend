@@ -8,6 +8,7 @@ import PhotoGrid from '../components/PhotoGrid.jsx'
 import SocialHandleFields from '../components/SocialHandleFields.jsx'
 import { keyFromPhotoUrl } from '../lib/uploads.js'
 import { SOCIAL_PLATFORMS, normalizeHandle } from '../lib/socialHandles.js'
+import { formatPhoneForDisplay } from '../lib/phone.js'
 import { useBackOr } from '../lib/navigation.js'
 
 const MIN_NAME = 2
@@ -17,8 +18,6 @@ const MIN_TAGS = 3
 const MAX_TAGS = 5
 const BIO_MAX = 300
 
-// Phone isn't exposed by the API yet — mock value for the locked row.
-const MOCK_PHONE = '+91 98765 43210'
 
 // Shimmer placeholder shaped like the form while the profile loads.
 function EditProfileSkeleton() {
@@ -284,7 +283,9 @@ export function EditProfile() {
           <div className="mt-4">
             <label className="font-body text-[13px] font-semibold text-cirkle-text-light">Phone number</label>
             <div className="mt-1.5 flex items-center justify-between px-4 py-3 rounded-[10px] bg-cirkle-input border border-cirkle-border-card">
-              <span className="font-body text-[14px] text-cirkle-text-muted">{MOCK_PHONE}</span>
+              <span className="font-body text-[14px] text-cirkle-text-muted">
+                {profile?.phone ? formatPhoneForDisplay(profile.phone) : '—'}
+              </span>
               <Lock size={16} className="text-cirkle-text-muted" strokeWidth={2} />
             </div>
             <p className="mt-1.5 font-body text-[12px] text-cirkle-text-muted">Phone number used to sign in</p>
