@@ -22,7 +22,15 @@ export const useProfileStore = create((set, get) => ({
         set({ profile: data.profile, isLoading: false })
         return data.profile
       })
-      .catch((err) => {
+      .catch(async (err) => {
+        // 404 = the account behind this token no longer exists (ghost
+        // session) — hand off to the session reset rather than rendering
+        // an error nobody can act on.
+        if (err instanceof ApiError && err.status === 404) {
+          const { handleGhostSession } = await import('./session.js')
+          handleGhostSession()
+          return null
+        }
         set({
           error: err instanceof ApiError ? err.message : 'Could not load your profile.',
           isLoading: false,

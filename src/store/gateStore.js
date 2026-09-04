@@ -31,8 +31,13 @@ export const useGateStore = create((set, get) => ({
         profileComplete: Boolean(d.partialProfileComplete),
         currentStep: d.currentOnboardingStep ?? 0,
       })
-    } catch {
-      /* keep what we have — the server gates are the real wall */
+    } catch (err) {
+      // 404 = ghost session (token for a deleted account) — reset it.
+      if (err?.status === 404) {
+        const { handleGhostSession } = await import('./session.js')
+        handleGhostSession()
+      }
+      /* otherwise keep what we have — the server gates are the real wall */
     }
     return get()
   },
