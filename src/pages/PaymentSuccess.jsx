@@ -1,5 +1,7 @@
+import { useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ArrowLeft, CheckCircle2 } from 'lucide-react'
+import { trackMetaEvent } from '../lib/metaPixel.js'
 
 const rupees = (paise) => `₹${(paise / 100).toLocaleString('en-IN')}`
 
@@ -8,6 +10,19 @@ export function PaymentSuccess() {
   const { state } = useLocation()
   const bookingRef = state?.bookingRef
   const totalPaise = state?.totalPaise
+  const eventId = state?.eventId
+
+  // The money event. eventID = booking ref, the SAME id the backend's
+  // Conversions API sends from the Razorpay webhook — Meta dedups the pair,
+  // so the purchase counts once whether one or both sides delivered.
+  useEffect(() => {
+    if (!bookingRef || totalPaise == null) return
+    trackMetaEvent(
+      'Purchase',
+      { value: totalPaise / 100, currency: 'INR', content_ids: eventId ? [eventId] : undefined },
+      bookingRef,
+    )
+  }, [bookingRef, totalPaise, eventId])
 
   return (
     <div className="min-h-screen flex flex-col px-6 py-6">
