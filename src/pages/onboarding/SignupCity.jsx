@@ -4,6 +4,7 @@ import { Check } from 'lucide-react'
 import { api, ApiError } from '../../lib/api.js'
 import { consumeRedirect } from '../../lib/redirect.js'
 import { markHistoryFloor } from '../../lib/navigation.js'
+import { trackMetaEvent } from '../../lib/metaPixel.js'
 
 // The whole of sign-up beyond the phone number (deferred-onboarding model):
 // pick a city, land on the feed. The full profile comes later, at the first
@@ -49,6 +50,8 @@ export function SignupCity() {
     setApiError('')
     try {
       await api.patch('/onboarding/city', { cityId })
+      // The moment a visitor becomes a user (phone verified + city chosen).
+      trackMetaEvent('CompleteRegistration')
       // A deep link (shared event, ticket) survives the city screen — this is
       // where it gets consumed for a brand-new user. Nothing before this
       // entry is "back": the login screens were replaces.

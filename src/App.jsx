@@ -1,4 +1,6 @@
-import { Routes, Route, Outlet } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
+import { Routes, Route, Outlet, useLocation } from 'react-router-dom'
+import { initMetaPixel, trackPageView } from './lib/metaPixel.js'
 import Landing from './pages/onboarding/Landing.jsx'
 import PhoneEntry from './pages/onboarding/PhoneEntry.jsx'
 import OtpVerification from './pages/onboarding/OtpVerification.jsx'
@@ -31,8 +33,29 @@ import PrivacyPolicy from './pages/legal/PrivacyPolicy.jsx'
 import TermsOfUse from './pages/legal/TermsOfUse.jsx'
 import SafetyGuidelines from './pages/legal/SafetyGuidelines.jsx'
 
+// The Pixel's eyes on the SPA: init once (fires the first PageView), then
+// one PageView per route change — the base snippet alone would report a
+// single page per visit. Renders nothing.
+function MetaPixelTracker() {
+  const { pathname } = useLocation()
+  const firstRender = useRef(true)
+  useEffect(() => {
+    initMetaPixel()
+  }, [])
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false // init already tracked the landing page
+      return
+    }
+    trackPageView()
+  }, [pathname])
+  return null
+}
+
 function App() {
   return (
+    <>
+    <MetaPixelTracker />
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/phone" element={<PhoneEntry />} />
@@ -105,6 +128,7 @@ function App() {
       <Route path="/legal/terms" element={<TermsOfUse />} />
       <Route path="/legal/safety" element={<SafetyGuidelines />} />
     </Routes>
+    </>
   )
 }
 

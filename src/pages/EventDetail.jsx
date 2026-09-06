@@ -25,6 +25,7 @@ import { useGateStore } from '../store/gateStore.js'
 import CompleteProfileDialog from '../components/CompleteProfileDialog.jsx'
 import PromoPopupDialog from '../components/PromoPopupDialog.jsx'
 import { isPromoSeen, markPromoSeen, rememberPromoCode } from '../lib/promo.js'
+import { trackMetaEvent } from '../lib/metaPixel.js'
 
 // Only the first few attendees are needed for the avatar row — "See All" opens
 // the paginated list. `total` from the response drives the count and +N badge.
@@ -686,7 +687,15 @@ export function EventDetail() {
     api
       .get(`/events/${id}`)
       .then((data) => {
-        if (active) setFetchedEvent(data.event)
+        if (active) {
+          setFetchedEvent(data.event)
+          // Ad-funnel signal: this person looked at this event.
+          trackMetaEvent('ViewContent', {
+            content_ids: [data.event.id],
+            content_name: data.event.name,
+            content_type: 'product',
+          })
+        }
       })
       .catch((err) => {
         // Only surface an error if there's nothing cached to show.
@@ -761,6 +770,10 @@ export function EventDetail() {
 
       const res = await api.post(`/events/${id}/invitations`)
       patchEvent({ invitationStatus: res.status ?? 'pending' })
+      // Server-side CAPI twin uses the same event name; no shared id needed
+      // (a Lead is low-stakes enough that occasional double-count beats
+      // plumbing an id through the invitation row).
+      trackMetaEvent('Lead', { content_ids: [id] })
     } catch (err) {
       // The social-handle gate runs before the invitation row is created, so
       // nothing was written — collect the handles and retry. Branching on the

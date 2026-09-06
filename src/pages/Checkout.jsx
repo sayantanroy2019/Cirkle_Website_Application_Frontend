@@ -25,6 +25,7 @@ import CompleteProfileDialog from '../components/CompleteProfileDialog.jsx'
 import HoldCountdown from '../components/HoldCountdown.jsx'
 import { useBackOr } from '../lib/navigation.js'
 import { getPromoCode } from '../lib/promo.js'
+import { trackMetaEvent } from '../lib/metaPixel.js'
 
 const rupees = (paise) => `₹${(paise / 100).toLocaleString('en-IN')}`
 
@@ -224,6 +225,14 @@ export function Checkout() {
       }
       return
     }
+
+    // Ad-funnel signal: a hold exists and Razorpay is about to open. The
+    // order id doubles as the dedup key if a server twin is ever added.
+    trackMetaEvent(
+      'InitiateCheckout',
+      { value: order.amount / 100, currency: 'INR' },
+      order.orderId,
+    )
 
     // One hold per event: asking for a different category while one is live
     // silently returns the held one. Paying now would buy the wrong ticket at
