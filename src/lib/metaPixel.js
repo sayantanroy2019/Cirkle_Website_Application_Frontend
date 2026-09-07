@@ -31,6 +31,13 @@ export function initMetaPixel() {
       t.src = v; s = b.getElementsByTagName(e)[0]
       s.parentNode.insertBefore(t, s)
     })(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js')
+    // Disable Meta's auto-config BEFORE init (it silently no-ops afterwards).
+    // Auto-config instruments the DOM and fires SubscribedButtonClick on every
+    // button, scraping button/form/page structure — including the OTP phone
+    // field and the onboarding email field. We send exactly the five standard
+    // events we specify and nothing else; this is the browser-side sibling of
+    // disabling Automatic Advanced Matching on the dataset.
+    window.fbq('set', 'autoConfig', false, PIXEL_ID)
     window.fbq('init', PIXEL_ID)
     window.fbq('track', 'PageView')
   } catch {
