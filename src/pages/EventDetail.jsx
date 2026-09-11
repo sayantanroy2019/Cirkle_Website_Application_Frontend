@@ -871,7 +871,14 @@ export function EventDetail() {
     <div className="bg-cirkle-black h-[100dvh] flex flex-col overflow-hidden">
       <EventDetailHeader
         onBack={goBack}
-        shareUrl={`${window.location.origin}/events/${id}`}
+        // Prefer the short link (cirkle.live/e/<code>) — half the length and
+        // what organizers share. Falls back to the id URL for any event
+        // created before short codes existed.
+        shareUrl={
+          event?.shortCode
+            ? `${window.location.origin}/e/${event.shortCode}`
+            : `${window.location.origin}/events/${id}`
+        }
         shareTitle={event?.name ?? 'Cirkle event'}
       />
 
