@@ -24,6 +24,9 @@ export function EventAttendees() {
   // Deferred onboarding: the server keeps the count but hides the people
   // from an incomplete profile — this flags the create-profile prompt.
   const [profileRequired, setProfileRequired] = useState(false)
+  // Social-proof threshold: below it the roster is hidden entirely. Reachable
+  // here only by a direct URL, since the detail page hides the "See all" link.
+  const [whosGoingHidden, setWhosGoingHidden] = useState(false)
 
   // Each row already carries the full profile card, so opening one costs no request.
   const loadPage = useCallback(
@@ -33,6 +36,7 @@ export function EventAttendees() {
       })
       setTotal(res.total)
       setProfileRequired(Boolean(res.profileRequired))
+      setWhosGoingHidden(Boolean(res.whosGoingHidden))
       setOffset(nextOffset + res.data.length)
       setAttendees((prev) => (nextOffset === 0 ? res.data : [...prev, ...res.data]))
     },
@@ -98,7 +102,14 @@ export function EventAttendees() {
           <p className="font-body text-[14px] text-red-400">{loadError}</p>
         )}
 
-        {!isLoading && !loadError && total === 0 && (
+        {!isLoading && !loadError && whosGoingHidden && (
+          <p className="font-body text-[14px] text-cirkle-text-muted">
+            The guest list opens once a few more people have joined. Grab your
+            ticket and be one of them.
+          </p>
+        )}
+
+        {!isLoading && !loadError && !whosGoingHidden && total === 0 && (
           <p className="font-body text-[14px] text-cirkle-text-muted">
             Nobody has booked yet. Be the first.
           </p>

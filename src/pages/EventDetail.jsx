@@ -677,6 +677,9 @@ export function EventDetail() {
   // Deferred onboarding: the server keeps the count but hides the people
   // from an incomplete profile.
   const [attendeesGated, setAttendeesGated] = useState(false)
+  // The organizer's social-proof threshold: below it the whole Who's Going
+  // section is hidden (server decides via whosGoingHidden).
+  const [whosGoingHidden, setWhosGoingHidden] = useState(false)
   const [selectedPerson, setSelectedPerson] = useState(null)
 
   const event = fetchedEvent ?? cachedEvent
@@ -720,6 +723,7 @@ export function EventDetail() {
         setAttendees(res.data)
         setAttendeeTotal(res.total)
         setAttendeesGated(Boolean(res.profileRequired))
+        setWhosGoingHidden(Boolean(res.whosGoingHidden))
       })
       .catch(() => {
         /* section renders empty */
@@ -906,14 +910,18 @@ export function EventDetail() {
             {event.artists?.length > 0 && <EventLineup artists={event.artists} />}
             {event.gallery?.length > 0 && <EventGallery gallery={event.gallery} />}
             <EventVenue name={event.venueName} address={event.venueAddress} />
-            <EventWhosGoing
-              people={attendees}
-              total={attendeeTotal}
-              profileRequired={attendeesGated}
-              onCreateProfile={() => setProfileGate({ intent: 'people' })}
-              onSeeAll={() => navigate(`/events/${id}/attendees`)}
-              onSelect={setSelectedPerson}
-            />
+            {/* Below the organizer's threshold the section is hidden entirely —
+                no heading, count, or faces — so an empty roster never shows. */}
+            {!whosGoingHidden && (
+              <EventWhosGoing
+                people={attendees}
+                total={attendeeTotal}
+                profileRequired={attendeesGated}
+                onCreateProfile={() => setProfileGate({ intent: 'people' })}
+                onSeeAll={() => navigate(`/events/${id}/attendees`)}
+                onSelect={setSelectedPerson}
+              />
+            )}
             {/* <EventFindYourTribe groups={MOCK_GROUPS} /> — deferred to Phase 2 (groups) */}
           </>
         )}
