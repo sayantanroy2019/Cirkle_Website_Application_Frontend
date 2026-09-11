@@ -23,6 +23,7 @@ import MyTickets from './pages/MyTickets.jsx'
 import Profile from './pages/Profile.jsx'
 import CitySwitcher from './pages/CitySwitcher.jsx'
 import EventDetail from './pages/EventDetail.jsx'
+import EventShortLink from './pages/EventShortLink.jsx'
 import EventAttendees from './pages/EventAttendees.jsx'
 import EventTickets from './pages/EventTickets.jsx'
 import EditProfile from './pages/EditProfile.jsx'
@@ -109,6 +110,8 @@ function App() {
       </Route>
       <Route path="/city" element={<RequireAuth><CitySwitcher /></RequireAuth>} />
       <Route path="/events/:id" element={<RequireAuth><EventDetail /></RequireAuth>} />
+      {/* Short share link: cirkle.live/e/<code> → resolves and lands on the event. */}
+      <Route path="/e/:code" element={<RequireAuth><EventShortLink /></RequireAuth>} />
       <Route path="/events/:id/attendees" element={<RequireAuth><EventAttendees /></RequireAuth>} />
       <Route path="/events/:id/tickets" element={<RequireAuth><EventTickets /></RequireAuth>} />
       <Route path="/profile/edit" element={<RequireAuth><EditProfile /></RequireAuth>} />
