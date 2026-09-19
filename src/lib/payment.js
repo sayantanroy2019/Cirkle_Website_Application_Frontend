@@ -4,15 +4,18 @@ import { api } from './api.js'
 // computes the authoritative amount at order creation — this never gets sent.
 export const ESTIMATED_GST_PERCENT = 18
 
-export function estimateBreakdown(basePricePaise) {
-  const gstPaise = Math.round((basePricePaise * ESTIMATED_GST_PERCENT) / 100)
+export function estimateBreakdown(basePricePaise, platformFeePaise = 0) {
+  const fee = Math.max(0, platformFeePaise || 0)
+  // Mirror the server: GST on (subtotal + platform fee).
+  const gstPaise = Math.round(((basePricePaise + fee) * ESTIMATED_GST_PERCENT) / 100)
   return {
     basePricePaise,
     discountPaise: 0,
     subtotalPaise: basePricePaise,
+    platformFeePaise: fee,
     gstPercentage: ESTIMATED_GST_PERCENT,
     gstPaise,
-    totalPaise: basePricePaise + gstPaise,
+    totalPaise: basePricePaise + fee + gstPaise,
     estimated: true,
   }
 }

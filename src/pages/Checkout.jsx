@@ -127,7 +127,12 @@ export function Checkout() {
   // The server charges the category's price, so estimate from that. Falls back
   // to the event price only when no category came through (see the guard below).
   const basePricePaise = ticketCategory?.pricePaise ?? event?.price
-  const breakdown = couponBreakdown ?? (basePricePaise != null ? estimateBreakdown(basePricePaise) : null)
+  // Platform fee is per person — estimate it as fee × admits until the server
+  // breakdown (coupon preview / order) replaces this with the authoritative one.
+  const estimatedFeePaise = (event?.platformFeePaise ?? 0) * (ticketCategory?.admitsCount ?? 1)
+  const breakdown =
+    couponBreakdown ??
+    (basePricePaise != null ? estimateBreakdown(basePricePaise, estimatedFeePaise) : null)
   const isBusy = phase !== 'idle' && phase !== 'pending'
 
   const handleApplyCoupon = async () => {
@@ -423,6 +428,9 @@ export function Checkout() {
             <Row label="Ticket price" value={rupees(breakdown.basePricePaise)} />
             {breakdown.discountPaise > 0 && (
               <Row label="Discount" value={`− ${rupees(breakdown.discountPaise)}`} accent />
+            )}
+            {breakdown.platformFeePaise > 0 && (
+              <Row label="Platform fee" value={rupees(breakdown.platformFeePaise)} muted />
             )}
             <Row label={`GST (${breakdown.gstPercentage}%)`} value={rupees(breakdown.gstPaise)} muted />
             <div className="mt-2 pt-3 border-t border-cirkle-border flex items-center justify-between">
