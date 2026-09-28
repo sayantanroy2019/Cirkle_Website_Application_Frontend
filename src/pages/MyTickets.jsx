@@ -23,6 +23,13 @@ function TicketStub({ ticket, onClick }) {
           <MapPin size={14} className="text-cirkle-yellow shrink-0" strokeWidth={2} />
           <span className="truncate">{ticket.event.venueName}</span>
         </div>
+        {/* A cart booking: say how big the group is. Single-person tickets
+            keep the stub as it was. */}
+        {ticket.admitsTotal > 1 && (
+          <p className="mt-2 font-body text-[13px] font-semibold text-cirkle-yellow">
+            {ticket.ticketCount} {ticket.ticketCount === 1 ? 'ticket' : 'tickets'} · admits {ticket.admitsTotal} people
+          </p>
+        )}
       </div>
 
       {/* Perforation */}

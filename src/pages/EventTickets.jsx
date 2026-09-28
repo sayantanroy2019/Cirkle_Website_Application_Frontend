@@ -6,10 +6,11 @@ import { useEventsStore, selectEventById } from '../store/eventsStore.js'
 import { formatPrice, formatEventDateTime } from '../lib/format.js'
 import TicketCategorySelector from '../components/TicketCategorySelector.jsx'
 import { useBackOr } from '../lib/navigation.js'
+import { linesFromQuantities, summarizeLines, peopleLabel, DEFAULT_MAX_PEOPLE } from '../lib/cart.js'
 
-// Step between the event and checkout: pick which ticket you're buying.
-// Fetches the event itself rather than relying on router state, so a refresh or
-// a shared link lands here intact.
+// Step between the event and checkout: build the cart — which tiers, how many
+// of each. Fetches the event itself rather than relying on router state, so a
+// refresh or a shared link lands here intact.
 export function EventTickets() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -19,8 +20,9 @@ export function EventTickets() {
   const cachedEvent = useEventsStore(selectEventById(id))
   const [fetchedEvent, setFetchedEvent] = useState(null)
   const [loadError, setLoadError] = useState('')
-  // Never pre-selected — how many people a ticket admits has to be deliberate.
-  const [selected, setSelected] = useState(null)
+  // categoryId -> quantity. Starts empty: how many people are coming has to be
+  // a deliberate choice, never a default.
+  const [quantities, setQuantities] = useState({})
 
   // The list object has no ticketCategories, so the fetch is what makes this
   // page usable; the cached copy only fills in the header sooner.
@@ -44,14 +46,21 @@ export function EventTickets() {
   }, [id])
 
   const categories = fetchedEvent?.ticketCategories ?? []
+  const maxPeople = fetchedEvent?.maxPeoplePerOrder ?? DEFAULT_MAX_PEOPLE
   const isLoading = !fetchedEvent && !loadError
 
+  const lines = linesFromQuantities(categories, quantities)
+  const { tickets, people, basePaise } = summarizeLines(lines)
+
+  const setQty = (categoryId, qty) =>
+    setQuantities((q) => ({ ...q, [categoryId]: Math.max(0, qty) }))
+
   const handleContinue = () => {
-    if (!selected) return
+    if (tickets === 0) return
     navigate(`/checkout/${id}`, {
-      // The whole category travels, not just the id: checkout shows the name,
-      // and order creation will send the id once it accepts one.
-      state: { ticketCategoryId: selected.id, ticketCategory: selected },
+      // Whole categories travel, not just ids: checkout shows names and prices
+      // from them and sends the ids + quantities to order creation.
+      state: { cartLines: lines },
     })
   }
 
@@ -66,7 +75,7 @@ export function EventTickets() {
         >
           <ArrowLeft size={22} strokeWidth={2} />
         </button>
-        <h1 className="ml-1 font-body text-[16px] font-semibold text-white">Choose your ticket</h1>
+        <h1 className="ml-1 font-body text-[16px] font-semibold text-white">Choose your tickets</h1>
       </header>
 
       <div className="flex-1 px-4 py-4 max-w-[480px] w-full mx-auto">
@@ -112,13 +121,14 @@ export function EventTickets() {
 
             <TicketCategorySelector
               categories={categories}
-              selectedId={selected?.id ?? null}
-              onSelect={setSelected}
+              quantities={quantities}
+              onChange={setQty}
+              maxPeople={maxPeople}
             />
 
             <p className="mt-4 font-body text-[12px] text-cirkle-text-muted text-center">
-              One booking is one ticket with one QR code — a Couple or Group pass admits several
-              people on that single ticket.
+              Mix any tickets you like — you get one QR code for everyone. Up to {maxPeople} people
+              per booking.
             </p>
           </>
         )}
@@ -128,15 +138,20 @@ export function EventTickets() {
       {categories.length > 0 && (
         <div className="sticky bottom-0 bg-cirkle-black border-t border-cirkle-border px-4 py-4">
           <div className="max-w-[480px] mx-auto">
+            {tickets > 0 && (
+              <p className="mb-2 text-center font-body text-[13px] text-cirkle-text-muted">
+                {tickets} {tickets === 1 ? 'ticket' : 'tickets'} · admits {peopleLabel(people)} ·{' '}
+                <span className="text-white font-semibold">{formatPrice(basePaise)}</span>
+                {people === maxPeople && <span> · max reached</span>}
+              </p>
+            )}
             <button
               type="button"
               onClick={handleContinue}
-              disabled={!selected}
+              disabled={tickets === 0}
               className="btn-primary w-full px-6 py-3.5 text-[15px] font-bold tracking-wide uppercase disabled:opacity-40 disabled:pointer-events-none"
             >
-              {selected
-                ? `Continue · ${selected.categoryName} · ${formatPrice(selected.pricePaise)}`
-                : 'Select a ticket'}
+              {tickets > 0 ? `Continue · ${formatPrice(basePaise)}` : 'Add tickets'}
             </button>
           </div>
         </div>
