@@ -21,17 +21,17 @@ export function estimateBreakdown(basePricePaise, platformFeePaise = 0) {
 }
 
 // Preview a coupon — returns { valid, couponCode, breakdown }. Throws ApiError.
-// The chosen tier is required: the discount previews against that tier's
+// The cart is required: the discount previews against the whole cart's
 // price, exactly as the charge will compute it.
-export function validateCoupon(code, eventId, eventTicketCategoryId) {
-  return api.post('/coupons/validate', { code, eventId, eventTicketCategoryId })
+export function validateCoupon(code, eventId, items) {
+  return api.post('/coupons/validate', { code, eventId, items })
 }
 
-// Claim a hold + create (or resume) a Razorpay order. Returns OrderCreated.
-// `eventTicketCategoryId` is required by the API — the price charged and the
-// capacity consumed both come from the chosen category.
-export function createOrder(eventId, eventTicketCategoryId, couponCode) {
-  const body = { eventId, eventTicketCategoryId }
+// Claim a hold + create (or resume) a Razorpay order. Returns OrderCreated,
+// whose `items` are the lines actually held (a resumed hold may differ from
+// what was just asked for). `items` is [{ eventTicketCategoryId, quantity }].
+export function createOrder(eventId, items, couponCode) {
+  const body = { eventId, items }
   if (couponCode) body.couponCode = couponCode
   return api.post('/payments/orders', body)
 }

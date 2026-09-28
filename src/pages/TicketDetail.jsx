@@ -230,6 +230,33 @@ export function TicketDetail() {
               Show this at the entrance
             </p>
 
+            {/* What this one QR covers. Tickets issued before carts have no
+                lines and simply show the three plain facts. */}
+            {ticket.items?.length > 0 && (
+              <div className="mt-6 rounded-[12px] bg-cirkle-input border border-cirkle-border-card px-4 py-3">
+                <p className="font-body text-[12px] font-semibold uppercase tracking-wider text-cirkle-text-muted">
+                  This QR admits {ticket.admitsTotal} {ticket.admitsTotal === 1 ? 'person' : 'people'}
+                </p>
+                <ul className="mt-2 flex flex-col gap-1">
+                  {ticket.items.map((item) => (
+                    <li key={item.eventTicketCategoryId} className="flex items-center justify-between font-body text-[14px]">
+                      <span className="text-white">
+                        {item.quantity}× {item.categoryName}
+                      </span>
+                      <span className="text-cirkle-text-muted">
+                        admits {item.admitsTotal}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                {ticket.admitsTotal > 1 && (
+                  <p className="mt-2 font-body text-[12px] text-cirkle-text-muted">
+                    Everyone comes in together on this one code.
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Three plain facts */}
             <div className="mt-6">
               <Fact label="Ticket holder" value="You" />
