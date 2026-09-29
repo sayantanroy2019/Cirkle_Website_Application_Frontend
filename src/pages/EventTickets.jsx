@@ -47,13 +47,20 @@ export function EventTickets() {
 
   const categories = fetchedEvent?.ticketCategories ?? []
   const maxPeople = fetchedEvent?.maxPeoplePerOrder ?? DEFAULT_MAX_PEOPLE
+  // Invite-only: one ticket of one tier per person — the server says so on
+  // the detail; the eventType fallback covers a response from before the flag.
+  const single = fetchedEvent?.singleTicketOnly ?? fetchedEvent?.eventType === 'invite_only'
   const isLoading = !fetchedEvent && !loadError
 
   const lines = linesFromQuantities(categories, quantities)
   const { tickets, people, basePaise } = summarizeLines(lines)
 
+  // Cart mode edits one tier's count; single mode replaces the whole
+  // selection, so picking a tier un-picks the previous one.
   const setQty = (categoryId, qty) =>
-    setQuantities((q) => ({ ...q, [categoryId]: Math.max(0, qty) }))
+    setQuantities((q) =>
+      single ? (qty > 0 ? { [categoryId]: 1 } : {}) : { ...q, [categoryId]: Math.max(0, qty) },
+    )
 
   const handleContinue = () => {
     if (tickets === 0) return
@@ -75,7 +82,9 @@ export function EventTickets() {
         >
           <ArrowLeft size={22} strokeWidth={2} />
         </button>
-        <h1 className="ml-1 font-body text-[16px] font-semibold text-white">Choose your tickets</h1>
+        <h1 className="ml-1 font-body text-[16px] font-semibold text-white">
+          {single ? 'Choose your ticket' : 'Choose your tickets'}
+        </h1>
       </header>
 
       <div className="flex-1 px-4 py-4 max-w-[480px] w-full mx-auto">
@@ -124,11 +133,13 @@ export function EventTickets() {
               quantities={quantities}
               onChange={setQty}
               maxPeople={maxPeople}
+              single={single}
             />
 
             <p className="mt-4 font-body text-[12px] text-cirkle-text-muted text-center">
-              Mix any tickets you like — you get one QR code for everyone. Up to {maxPeople} people
-              per booking.
+              {single
+                ? 'Invite-only event: one ticket per person. A Couple or Group pass admits several people on that single ticket.'
+                : `Mix any tickets you like — you get one QR code for everyone. Up to ${maxPeople} people per booking.`}
             </p>
           </>
         )}
@@ -138,7 +149,7 @@ export function EventTickets() {
       {categories.length > 0 && (
         <div className="sticky bottom-0 bg-cirkle-black border-t border-cirkle-border px-4 py-4">
           <div className="max-w-[480px] mx-auto">
-            {tickets > 0 && (
+            {tickets > 0 && !single && (
               <p className="mb-2 text-center font-body text-[13px] text-cirkle-text-muted">
                 {tickets} {tickets === 1 ? 'ticket' : 'tickets'} · admits {peopleLabel(people)} ·{' '}
                 <span className="text-white font-semibold">{formatPrice(basePaise)}</span>
@@ -151,7 +162,11 @@ export function EventTickets() {
               disabled={tickets === 0}
               className="btn-primary w-full px-6 py-3.5 text-[15px] font-bold tracking-wide uppercase disabled:opacity-40 disabled:pointer-events-none"
             >
-              {tickets > 0 ? `Continue · ${formatPrice(basePaise)}` : 'Add tickets'}
+              {tickets === 0
+                ? single ? 'Select a ticket' : 'Add tickets'
+                : single
+                  ? `Continue · ${lines[0].category.categoryName} · ${formatPrice(basePaise)}`
+                  : `Continue · ${formatPrice(basePaise)}`}
             </button>
           </div>
         </div>
