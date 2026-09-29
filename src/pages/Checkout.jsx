@@ -370,11 +370,19 @@ export function Checkout() {
           </div>
           <ul className="mt-2 flex flex-col gap-1">
             {cartLines.map((line) => (
-              <li key={line.category.id} className="flex items-center justify-between font-body text-[13px]">
-                <span className="text-cirkle-text-light">
-                  {line.quantity}× {line.category.categoryName}
-                </span>
-                <span className="text-white">{rupees(line.category.pricePaise * line.quantity)}</span>
+              <li key={line.category.id} className="font-body text-[13px]">
+                <div className="flex items-center justify-between">
+                  <span className="text-cirkle-text-light">
+                    {line.quantity}× {line.category.categoryName}
+                  </span>
+                  <span className="text-white">{rupees(line.category.pricePaise * line.quantity)}</span>
+                </div>
+                {/* The tier's note, same voice as on the picker. */}
+                {line.category.note && (
+                  <p className="mt-0.5 font-body text-[12px] leading-snug text-cirkle-text-muted whitespace-pre-line">
+                    {line.category.note}
+                  </p>
+                )}
               </li>
             ))}
           </ul>

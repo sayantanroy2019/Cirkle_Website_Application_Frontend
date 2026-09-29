@@ -239,13 +239,20 @@ export function TicketDetail() {
                 </p>
                 <ul className="mt-2 flex flex-col gap-1">
                   {ticket.items.map((item) => (
-                    <li key={item.eventTicketCategoryId} className="flex items-center justify-between font-body text-[14px]">
-                      <span className="text-white">
-                        {item.quantity}× {item.categoryName}
-                      </span>
-                      <span className="text-cirkle-text-muted">
-                        admits {item.admitsTotal}
-                      </span>
+                    <li key={item.eventTicketCategoryId} className="font-body text-[14px]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-white">
+                          {item.quantity}× {item.categoryName}
+                        </span>
+                        <span className="text-cirkle-text-muted">
+                          admits {item.admitsTotal}
+                        </span>
+                      </div>
+                      {item.note && (
+                        <p className="mt-0.5 font-body text-[12px] leading-snug text-cirkle-text-muted whitespace-pre-line">
+                          {item.note}
+                        </p>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -261,6 +268,14 @@ export function TicketDetail() {
             <div className="mt-6">
               <Fact label="Ticket holder" value="You" />
               <Fact label="Price paid" value={rupees(ticket.pricePaid)} />
+              {/* Only once the fresh response has said either way — a cached
+                  copy from before this field existed must not read "Not used". */}
+              {ticket.coupon !== undefined && (
+                <Fact
+                  label="Discount coupon"
+                  value={ticket.coupon ? `${ticket.coupon.code} · used` : 'Not used'}
+                />
+              )}
               <Fact label="Booking date" value={bookedFmt.format(new Date(ticket.bookedAt))} />
             </div>
           </>
