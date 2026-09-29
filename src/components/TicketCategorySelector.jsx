@@ -57,6 +57,14 @@ export function TicketCategorySelector({ categories, quantities, onChange, maxPe
               <span className="block mt-0.5 font-body text-[13px] text-cirkle-text-muted">
                 {admitsLabel(category.admitsCount)} · {formatPrice(category.pricePaise)}
               </span>
+              {/* The admin's note on this tier — what it includes, how it can
+                  be used. A step down from the admits line, never competing
+                  with the name. */}
+              {category.note && (
+                <span className="block mt-1 font-body text-[12px] leading-snug text-cirkle-text-light/80 whitespace-pre-line">
+                  {category.note}
+                </span>
+              )}
               {capLimited && (
                 <span className="block mt-0.5 font-body text-[12px] text-cirkle-text-muted">
                   Max {maxPeople} people per booking
