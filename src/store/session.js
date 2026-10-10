@@ -5,6 +5,7 @@ import { useEventsStore } from './eventsStore.js'
 import { useVibesStore } from './vibesStore.js'
 import { useOnboarding } from './onboardingStore.js'
 import { useGateStore } from './gateStore.js'
+import { useWalletStore } from './walletStore.js'
 import { clearCompletionReturn, clearRedirect } from '../lib/redirect.js'
 import { clearCachedTickets } from '../lib/ticketCache.js'
 
@@ -17,6 +18,7 @@ export function resetUserStores() {
   useVibesStore.getState().reset()
   useOnboarding.getState().resetProfile()
   useGateStore.getState().reset()
+  useWalletStore.getState().reset()
 }
 
 /**

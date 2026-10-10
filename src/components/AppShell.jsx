@@ -1,6 +1,8 @@
+import { useEffect } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { MapPin, ChevronDown } from 'lucide-react'
+import { MapPin, ChevronDown, Wallet } from 'lucide-react'
 import { useActiveCity } from '../store/cityStore.js'
+import { useWalletStore } from '../store/walletStore.js'
 import { NAV_ITEMS } from './navItems.js'
 import BottomNav from './BottomNav.jsx'
 import Logo from './Logo.jsx'
@@ -21,10 +23,32 @@ function LocationPill({ cityName, onClick }) {
   )
 }
 
+/** My Wallet (F&B Part 5) — mobile top bar, left of the location pill. */
+function WalletButton({ onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="My wallet"
+      className="flex items-center justify-center w-9 h-9 rounded-full bg-cirkle-chip border border-cirkle-border-card transition-all duration-200 hover:border-cirkle-yellow/60"
+    >
+      <Wallet size={17} className="text-cirkle-yellow" strokeWidth={2.25} />
+    </button>
+  )
+}
+
 export function AppShell() {
   const navigate = useNavigate()
   const { activeCityName } = useActiveCity()
   const openCitySwitcher = () => navigate('/city')
+  const openWallet = () => navigate('/wallet')
+
+  // Warm the wallet cache the moment the app opens after login, so My Wallet
+  // and its screens render instantly when tapped (F&B Part 5).
+  const prefetchWallet = useWalletStore((s) => s.prefetch)
+  useEffect(() => {
+    prefetchWallet()
+  }, [prefetchWallet])
 
   return (
     // Full-height flex column: header / scrolling main / (tab bar) / bottom nav.
@@ -60,10 +84,13 @@ export function AppShell() {
           </div>
         </div>
 
-        {/* Mobile / tablet: logo left · location right */}
+        {/* Mobile / tablet: logo left · wallet + location right */}
         <div className="md:hidden flex items-center justify-between px-4 h-14">
           <Logo />
-          <LocationPill cityName={activeCityName} onClick={openCitySwitcher} />
+          <div className="flex items-center gap-2">
+            <WalletButton onClick={openWallet} />
+            <LocationPill cityName={activeCityName} onClick={openCitySwitcher} />
+          </div>
         </div>
       </header>
 

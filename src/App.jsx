@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Routes, Route, Outlet, useLocation } from 'react-router-dom'
+import { Routes, Route, Outlet, Navigate, useLocation } from 'react-router-dom'
 import { initMetaPixel, trackPageView } from './lib/metaPixel.js'
 import Landing from './pages/onboarding/Landing.jsx'
 import PhoneEntry from './pages/onboarding/PhoneEntry.jsx'
@@ -30,6 +30,9 @@ import EditProfile from './pages/EditProfile.jsx'
 import Checkout from './pages/Checkout.jsx'
 import PaymentSuccess from './pages/PaymentSuccess.jsx'
 import TicketDetail from './pages/TicketDetail.jsx'
+import Wallet from './pages/Wallet.jsx'
+import WalletTopUp from './pages/WalletTopUp.jsx'
+import WalletHistory from './pages/WalletHistory.jsx'
 import PrivacyPolicy from './pages/legal/PrivacyPolicy.jsx'
 import TermsOfUse from './pages/legal/TermsOfUse.jsx'
 import SafetyGuidelines from './pages/legal/SafetyGuidelines.jsx'
@@ -115,6 +118,14 @@ function App() {
       <Route path="/events/:id/attendees" element={<RequireAuth><EventAttendees /></RequireAuth>} />
       <Route path="/events/:id/tickets" element={<RequireAuth><EventTickets /></RequireAuth>} />
       <Route path="/profile/edit" element={<RequireAuth><EditProfile /></RequireAuth>} />
+      {/* My Wallet (F&B Part 5) — the wallet icon in the top bar / on Profile. */}
+      <Route path="/wallet" element={<RequireAuth><Wallet /></RequireAuth>} />
+      <Route path="/wallet/top-up" element={<RequireAuth><WalletTopUp /></RequireAuth>} />
+      <Route path="/wallet/history" element={<RequireAuth><WalletHistory /></RequireAuth>} />
+      {/* The wallet QR encodes cirkle.live/w/<token>. A human who scans it with
+          a phone camera lands on their wallet after the normal login; the token
+          itself grants nothing and is never read here. */}
+      <Route path="/w/:token" element={<RequireAuth><Navigate to="/wallet" replace /></RequireAuth>} />
       <Route path="/checkout/:eventId" element={<RequireAuth><Checkout /></RequireAuth>} />
       <Route path="/payment/success" element={<RequireAuth><PaymentSuccess /></RequireAuth>} />
       {/* Deep-link target from the WhatsApp ticket message. Guarded so a tap
