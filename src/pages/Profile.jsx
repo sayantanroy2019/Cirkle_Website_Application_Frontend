@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, Pencil, Eye, CalendarDays } from 'lucide-react'
+import { ChevronRight, Pencil, Eye, CalendarDays, Wallet } from 'lucide-react'
 import { useAuthStore } from '../store/authStore.js'
 import { useProfileStore } from '../store/profileStore.js'
 import { useGateStore } from '../store/gateStore.js'
@@ -217,6 +217,23 @@ export function Profile() {
   return (
     <div className="px-6 py-6 max-w-[480px] mx-auto">
       {loadError && <p className="font-body text-[14px] text-red-400">{loadError}</p>}
+
+      {/* My Wallet — top-left of the profile on desktop (F&B Part 5). On
+          mobile the wallet lives in the top bar beside the location pill
+          (AppShell), so this pill is desktop-only to avoid showing it twice. */}
+      <div className="hidden md:block mb-5">
+        <button
+          type="button"
+          onClick={() => navigate('/wallet')}
+          className="inline-flex items-center gap-2 pl-2.5 pr-3.5 py-2 rounded-full bg-cirkle-chip border border-cirkle-border-card transition-all duration-200 hover:border-cirkle-yellow/60"
+        >
+          <span className="w-7 h-7 rounded-full bg-cirkle-yellow/15 flex items-center justify-center">
+            <Wallet size={15} className="text-cirkle-yellow" strokeWidth={2.25} />
+          </span>
+          <span className="font-body text-[13px] font-bold text-white">My wallet</span>
+          <ChevronRight size={15} className="text-cirkle-text-muted" strokeWidth={2} />
+        </button>
+      </div>
 
       {/* How others see you — the identity centrepiece, leads the screen */}
       <div className="flex items-center gap-2">
