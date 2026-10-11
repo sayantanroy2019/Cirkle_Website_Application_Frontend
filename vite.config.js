@@ -34,5 +34,13 @@ export default defineConfig(({ mode }) => {
           }
         : undefined,
     },
+    // Unit tests (vitest): jsdom for components, Testing Library matchers
+    // from src/test/setup.js. `npm test` runs them; CI runs them on every PR.
+    test: {
+      environment: 'jsdom',
+      setupFiles: './src/test/setup.js',
+      globals: true,
+      include: ['src/**/*.test.{js,jsx}'],
+    },
   }
 })
