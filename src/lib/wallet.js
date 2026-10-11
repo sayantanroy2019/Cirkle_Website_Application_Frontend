@@ -39,8 +39,8 @@ export async function pollTopupUntilCredited(topupId, { intervalMs = 2000, timeo
 export function formatRupees(paise) {
   const rupees = (paise ?? 0) / 100
   return `₹${rupees.toLocaleString('en-IN', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: Number.isInteger(rupees) ? 0 : 2,
+    minimumFractionDigits: Number.isInteger(rupees) ? 0 : 2,
+    maximumFractionDigits: 2,
   })}`
 }
 
