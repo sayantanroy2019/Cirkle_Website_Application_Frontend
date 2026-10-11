@@ -28,7 +28,9 @@ import { getPromoCode } from '../lib/promo.js'
 import { trackMetaEvent } from '../lib/metaPixel.js'
 import { itemsFromLines, summarizeLines, sameCart, describeItems, peopleLabel } from '../lib/cart.js'
 
-const rupees = (paise) => `₹${(paise / 100).toLocaleString('en-IN')}`
+// Whole rupees stay whole (₹599); paise always show two digits (₹23.60, never ₹23.6).
+const rupees = (paise) =>
+  `₹${(paise / 100).toLocaleString('en-IN', { minimumFractionDigits: paise % 100 === 0 ? 0 : 2, maximumFractionDigits: 2 })}`
 
 function Row({ label, value, muted, accent }) {
   return (
