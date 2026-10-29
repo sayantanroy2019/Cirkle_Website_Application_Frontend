@@ -5,7 +5,7 @@ import { ApiError } from '../lib/api.js'
 import { useProfileStore } from '../store/profileStore.js'
 import { useWalletStore } from '../store/walletStore.js'
 import { openRazorpayCheckout } from '../lib/payment.js'
-import { createWalletTopup, verifyWalletTopup, pollTopupUntilCredited, formatRupees } from '../lib/wallet.js'
+import { createWalletTopup, verifyWalletTopup, pollTopupUntilCredited, formatRupees, topupCharge } from '../lib/wallet.js'
 
 /**
  * Top up (F&B spec Part 5, card 2): pick the Live event → pick or type the
@@ -62,6 +62,9 @@ export function WalletTopUp() {
     return ''
   })()
   const canPay = Boolean(event) && amountPaise > 0 && !amountError && phase === 'idle'
+  // On a cover-charge event the attendee pays the amount plus GST; the wallet
+  // gets the amount. Shown before Pay; the server's order is the authority.
+  const charge = event ? topupCharge(amountPaise, event) : null
 
   const pay = async () => {
     if (!canPay) return
@@ -95,7 +98,7 @@ export function WalletTopUp() {
       const v = await verifyWalletTopup(created.topup.id, handlerRes)
       setSummary(v.wallet) // the cache knows the new balance before the next screen opens
       fetchHistory({ force: true })
-      setDone({ amountPaise, balancePaise: v.wallet.totalBalancePaise, eventName: event.name })
+      setDone({ amountPaise, collectedPaise: created.topup.collectedPaise, gstPaise: created.topup.gstPaise, balancePaise: v.wallet.totalBalancePaise, eventName: event.name })
       setPhase('done')
       return
     } catch {
@@ -105,7 +108,7 @@ export function WalletTopUp() {
       if (polled && polled.status === 'credited') {
         const summary = await fetchSummary({ force: true })
         fetchHistory({ force: true })
-        setDone({ amountPaise, balancePaise: summary?.totalBalancePaise ?? null, eventName: event.name })
+        setDone({ amountPaise, collectedPaise: created.topup.collectedPaise, gstPaise: created.topup.gstPaise, balancePaise: summary?.totalBalancePaise ?? null, eventName: event.name })
         setPhase('done')
       } else {
         setPhase('pending')
@@ -132,6 +135,7 @@ export function WalletTopUp() {
           <h1 className="mt-5 font-display text-section-md text-white uppercase">{formatRupees(done.amountPaise)} added</h1>
           <p className="mt-2 font-body text-[14px] text-cirkle-text-muted">
             For {done.eventName}.{done.balancePaise !== null && ` Your balance is now ${formatRupees(done.balancePaise)}.`}
+            {done.gstPaise > 0 && ` You paid ${formatRupees(done.collectedPaise)}, including ${formatRupees(done.gstPaise)} GST.`}
             {' '}A receipt with your QR is on its way to WhatsApp.
           </p>
           <button type="button" onClick={() => navigate('/wallet', { replace: true })} className="btn-primary w-full py-3.5 mt-8">
@@ -271,6 +275,17 @@ export function WalletTopUp() {
               <span className="font-bold text-white">{event.expiryHoursAfterEnd} hours</span> after the event ends, and any unspent
               balance is not refunded.
             </p>
+            {event.walletGstEnabled && (
+              <p className="mt-2 font-body text-[13px] text-cirkle-text-light leading-relaxed">
+                This event charges GST on top-ups ({event.gstPercentage}%).
+                {charge && charge.gstPaise > 0 && (
+                  <>
+                    {' '}You&rsquo;ll pay <span className="font-bold text-white">{formatRupees(charge.collectedPaise)}</span>:{' '}
+                    {formatRupees(charge.amountPaise)} to your wallet + {formatRupees(charge.gstPaise)} GST.
+                  </>
+                )}
+              </p>
+            )}
           </div>
         )}
 
@@ -282,7 +297,7 @@ export function WalletTopUp() {
           {phase === 'awaiting' && 'Complete the payment…'}
           {phase === 'verifying' && 'Confirming…'}
           {phase === 'polling' && 'Confirming…'}
-          {phase === 'idle' && (amountPaise > 0 ? `Pay ${formatRupees(amountPaise)}` : 'Pay')}
+          {phase === 'idle' && (amountPaise > 0 ? `Pay ${formatRupees(charge?.collectedPaise ?? amountPaise)}` : 'Pay')}
         </button>
       </div>
     </div>

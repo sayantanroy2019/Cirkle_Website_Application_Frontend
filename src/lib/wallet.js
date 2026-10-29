@@ -59,3 +59,17 @@ export function formatValidTill(iso) {
 export function formatWhen(iso) {
   return new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true })
 }
+
+/**
+ * GST on wallet top-ups — the app-side mirror of the backend's src/fnb/gst.js,
+ * so the top-up screen can say "you'll pay ₹1,180" before the order exists.
+ * The order the server returns is what Razorpay charges; this is preview only.
+ * Same rounding as the server: GST to the paise, half up.
+ *
+ * `event` is an entry of GET /wallet/events: { walletGstEnabled, gstPercentage, … }.
+ */
+export function topupCharge(amountPaise, event) {
+  const pct = event?.walletGstEnabled ? Number(event.gstPercentage ?? 0) : 0
+  const gstPaise = pct > 0 ? Math.round((amountPaise * pct) / 100) : 0
+  return { amountPaise, gstPercentage: pct, gstPaise, collectedPaise: amountPaise + gstPaise }
+}

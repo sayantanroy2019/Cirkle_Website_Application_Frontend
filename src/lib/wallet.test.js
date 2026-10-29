@@ -3,9 +3,24 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const get = vi.fn()
 vi.mock('./api.js', () => ({ api: { get: (...a) => get(...a), post: vi.fn() } }))
 
-import { formatRupees, pollTopupUntilCredited } from './wallet.js'
+import { formatRupees, pollTopupUntilCredited, topupCharge } from './wallet.js'
 
-// The wallet's money formatter and the verify-fallback poll (F&B Part 5).
+// The wallet's money formatter, the verify-fallback poll (F&B Part 5) and the
+// GST preview for cover-charge events.
+
+describe('topupCharge', () => {
+  const gstEvent = { walletGstEnabled: true, gstPercentage: 18 }
+  it('₹1,000 on a GST event: ₹180 GST, ₹1,180 to pay, ₹1,000 to the wallet', () => {
+    expect(topupCharge(100000, gstEvent)).toEqual({ amountPaise: 100000, gstPercentage: 18, gstPaise: 18000, collectedPaise: 118000 })
+  })
+  it('rounds to the paise like the server', () => {
+    expect(topupCharge(33300, gstEvent).gstPaise).toBe(5994)
+  })
+  it('an ordinary event adds nothing', () => {
+    expect(topupCharge(100000, { walletGstEnabled: false, gstPercentage: 18 })).toEqual({ amountPaise: 100000, gstPercentage: 0, gstPaise: 0, collectedPaise: 100000 })
+    expect(topupCharge(100000, null).collectedPaise).toBe(100000)
+  })
+})
 
 describe('formatRupees', () => {
   it('whole rupees stay whole', () => {

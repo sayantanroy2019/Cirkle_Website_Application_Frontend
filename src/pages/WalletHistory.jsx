@@ -33,6 +33,10 @@ function EntryRow({ entry, onOpen }) {
         <span className="block font-body text-[12px] text-cirkle-text-muted">
           {formatWhen(entry.at)}
           {entry.volunteer ? ` · ${entry.volunteer}` : ''}
+          {/* GST events: what actually changed hands, beyond the wallet movement. */}
+          {entry.collectedPaise != null && Math.abs(entry.collectedPaise) !== Math.abs(entry.amountPaise)
+            ? ` · ${credit ? 'paid' : 'refunded'} ${formatRupees(Math.abs(entry.collectedPaise))} incl. GST`
+            : ''}
         </span>
       </span>
       <span className="text-right shrink-0">
